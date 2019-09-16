@@ -1,0 +1,6 @@
+#!/usr/bin/env b0caml
+#directory "+base"
+
+open Base
+let main () = ignore (Base.Sys.runtime_variant ())
+let () = if !Sys.interactive then () else main ()

@@ -1,0 +1,7 @@
+#!/usr/bin/env ocaml
+#use "topfind"
+#require "containers"
+
+
+let main () = CCIO.write_line stdout "Hello containers!"
+let () = if !Sys.interactive then () else main ()

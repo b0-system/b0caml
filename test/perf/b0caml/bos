@@ -1,0 +1,7 @@
+#!/usr/bin/env b0caml
+#directory "+bos"
+
+open Bos_setup
+
+let main () = Logs.app (fun m -> m "Hello bos!")
+let () = if !Sys.interactive then () else main ()

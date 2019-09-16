@@ -1,0 +1,7 @@
+#!/usr/bin/env ocaml
+#use "topfind"
+#require "base"
+
+open Base
+let main () = ignore (Base.Sys.runtime_variant ())
+let () = if !Sys.interactive then () else main ()

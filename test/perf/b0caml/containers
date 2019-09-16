@@ -1,0 +1,6 @@
+#!/usr/bin/env b0caml
+#directory "+containers"
+
+
+let main () = CCIO.write_line stdout "Hello containers!"
+let () = if !Sys.interactive then () else main ()

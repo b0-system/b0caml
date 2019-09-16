@@ -1,0 +1,23 @@
+opam-version: "2.0"
+maintainer: "Daniel Bünzli <daniel.buenzl i@erratique.ch>"
+authors: ["The b0caml programmers"]
+homepage: "https://erratique.ch/software/b0caml"
+doc: "https://erratique.ch/software/b0caml/doc"
+license: "ISC"
+dev-repo: "git+https://erratique.ch/repos/b0caml.git"
+bug-reports: "https://github.com/b0-system/b0caml/issues"
+tags: ["org:erratique" "org:b0-system" "build" "dev" "scripting" ]
+depends:
+[
+  "ocaml" {>= "4.03.0"}
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "topkg" {build & >= "0.9.0"}
+  "b0"
+]
+depopts: []
+build:
+[[
+  "ocaml" "pkg/pkg.ml" "build"
+          "--dev-pkg" "%{dev}%"
+]]

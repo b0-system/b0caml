@@ -1,0 +1,20 @@
+# To run the brzo built from the repo as if was in your PATH issue:
+# source dev-env
+
+ROOT=`pwd`
+B0CAML_BRZO=$ROOT/_b0/brzo-ocaml-exec-native/a.out
+B0CAML_OCB=$ROOT/_build/src/b0caml_bin.native
+
+
+b0caml()
+{
+  if [ -e $B0CAML_BRZO ]; then
+     $B0CAML_BRZO "$@"
+  elif [ -e $B0CAML_OCB ]; then
+     $B0CAML_OCB "$@"
+  else
+    echo "[WARNING] No dev build of b0caml found using PATH."
+    unset b0caml
+    brzo "$@"
+  fi
+}

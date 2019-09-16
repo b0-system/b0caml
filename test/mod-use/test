@@ -1,0 +1,5 @@
+#!/usr/bin/env b0caml
+#mod_use "conf.ml"
+#mod_use "with_mli.ml"
+
+let () = output_line stdout "Ho!"

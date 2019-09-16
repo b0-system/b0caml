@@ -1,0 +1,7 @@
+description = "Easy OCaml scripts"
+version = "%%VERSION_NUM%%"
+requires = "cmdliner b0.std b0.b00 b0.care"
+archive(byte) = "b0caml.cma"
+archive(native) = "b0caml.cmxa"
+plugin(byte) = "b0caml.cma"
+plugin(native) = "b0caml.cmxs"

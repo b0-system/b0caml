@@ -1,0 +1,445 @@
+{0 B0Caml}
+
+{e Easy OCaml scripts}
+
+{1:intro Introduction}
+
+Write programs not {e scripts}. I know… but at least quit your abusive
+relationship to [sh] derived linguistic disasters.
+
+{2:getting_started Getting started}
+
+A [b0caml] script is not different from an [ocaml] one, it just
+restricts the toplevel directives you can use and makes it easy for
+you to tap into installed third-party modules.
+
+Here's a simple [echo] script:
+
+{[
+cat > echo <<EOCAML
+#!/usr/bin/env b0caml
+
+let echo oc ss = output_string oc (String.concat " " ss ^ "\n")
+let () = echo stdout (List.tl (Array.to_list Sys.argv))
+EOCAML
+> chmod +x ./echo
+> ./echo grunt
+grunt
+> b0caml ./echo grunt  # for Windows compatible invocations
+grunt
+]}
+
+Except for the shebang line, nothing different.
+
+{2:intro_using_mods Using third-party modules}
+
+If you have compiled modules in a directory [DIR] that you want to use
+in your script, add the following directive after the shebang line,
+before the source and before any comment because [b0caml] authors are
+very lazy:
+
+{v
+#directory "DIR"
+v}
+
+If [DIR] is relative it is made absolute with respect to the directory
+of the script.  Using the ["+DIR"] syntax looks for modules in the
+[DIR] directory of the directories mentioned in the [OCAMLPATH]
+environment variable.
+
+[ocaml] also has the [#directory] directive but [b0caml] treats it a
+bit differently. First [b0caml] errors if [DIR] or [+DIR] does not
+resolve to an existing directory. Second [b0caml] knows how to load
+the implementation and dependencies of the modules it finds in that
+directory.
+
+The following script uses the [Ptime] and [Ptime_clock] modules. These
+modules are installed by the [ptime] package in the [ptime] and
+[ptime/os] of a directory assumed to be in the [OCAMLPATH]:
+
+{[
+> cat > local-time <<EOCAML
+#!/usr/bin/env b0caml
+#directory "+ptime"
+#directory "+ptime/os"
+
+let to_string () =
+  let now = Ptime_clock.now () in
+  let tz_offset_s = Ptime_clock.current_tz_offset_s () in
+  Format.asprintf "%a" (Ptime.pp_human ?tz_offset_s ()) now
+
+let main () = print_endline (to_string ())
+let () = if !Sys.interactive then () else main ()
+EOCAML
+> chmod +x local-time
+> ./local-time
+1995-09-12 11:27:13 +02:00
+]}
+
+{2:intro_repl_debug Toplevel (REPL) debugging}
+
+Since [ocaml] does not know how to load the implementation of the
+interfaces it finds in [#directory] directives you cannot directly
+load a [b0caml] script in the toplevel.
+
+[b0caml] provide the [--top] (or [--utop]) option which loads a script
+and the module it needs in the OCaml toplevel for interactive testing and
+debugging:
+
+{v
+> b0caml --top local-time  # load script and deps in the toplevel
+        OCaml version 4.08.0
+
+# Local_time.to_string ();;
+- : string = "1995-09-12 11:27:13 +02:00"
+v}
+
+The name of the module for the script is determined by
+{{!filename_mangling}mangling} the script filename.
+
+If your script parses command line arguments or uses {!exit} you
+should properly isolate these computations in a [main] function and
+prevent its invocation whenever {!Sys.interactive} is [true] (see for
+example the source of [local-time] above).
+
+{2:intro_modular_scripts Modular scripts}
+
+Repeat after me, write a program not a script.
+
+A [b0caml] script can import an OCaml implementation source [SRC] with
+the [#mod_use "SRC"] directive. [SRC] must be a regular OCaml
+implementation, it cannot be a [b0caml] script. A relative [SRC] is
+made absolute with respect to the directory of the script.
+
+These directives should also appear only after the shebang line and before the
+script source or comments. The file [SRC] must exist or the scripts
+errors.
+
+A quick and dirty configuration file for a script screams to [#mod_use]:
+
+{v
+> cat > conf.ml <<EOCAML
+let lang = "fr"
+EOCAML
+> cat > miaow <<EOCAML
+#!/usr/bin/env b0caml
+#mod_use "conf.ml"
+
+let scream = match Conf.lang with | "fr" -> "Miaou!" | _ -> "Miaow!"
+let main () = print_endline scream
+let () = if !Sys.interactive then () else main ()
+EOCAML
+> chmod +x miaow
+> ./miaow
+Miaou!
+v}
+
+[#mod_use] {{!filename_mangling}mangles} the filename of the path to
+define a module name and implementation in which the contents of the
+file is included litteraly. In the example above the line [#mod_use
+"conf.ml"] is simply expanded to:
+
+{[
+module Conf = struct
+#1 "/absolute/path/to/conf.ml"
+let lang = "fr"
+end
+]}
+
+Knowing OCaml's scoping rules it should be easy to see that a module
+you [#mod_use] can refer to the modules [#mod_use]d before. But it is
+your duty to provide them in the right order. The relative order
+between [#directory] and [#mod_use] directives doesn't matter, you can
+consider all [#directory] directives to be written before the first
+[#mod_use].
+
+A [#mod_use]d implementation is constrained by an interface if there's
+a side [.mli] for the file you include. For the full details read
+{{!mod_use_directive}here}.
+
+If you want to see the [#mod_use] expansions that are performand by
+[b0caml] on a script, the following invocation prints the final script
+source before it gets compiled:
+{[
+> b0caml --source miaow
+]}
+
+{2:intro_deps Dependency management}
+
+No formal dependency management is provided for the third-party
+modules you use – WRITE A PROGRAM NOT A SCRIPT !
+
+However the [#directory] and [#mod_use] directives of a script and can
+be resolved with the [deps] subcommand:
+
+{v
+> b0caml deps local-time
+/usr/lib/ocaml/ptime/
+/usr/lib/ocaml/ptime/os/
+> b0caml deps miaow
+/home/camelus/conf.ml
+v}
+
+These invocations error and the program exits with a non-zero exit
+code if the directives do not resolve. For a [+DIR] directory
+directive, resolution checks the directory [DIR] exists in at least
+one of the directories mentioned in the [OCAMLPATH] environment
+variable.
+
+The [--raw] option prevents resolution and reports the verbatim
+directive arguments.
+
+{v
+> b0caml deps --raw local-time
++ptime
++ptime/os
+> b0caml deps --raw miaow
+conf.ml
+v}
+
+The [--root] option also eschews resolution and outputs root directory
+names of [+] directory directives:
+
+{v
+> b0caml deps --root local-time  # Extract +DIR roots
+ptime
+> opam install $(b0caml deps --root local-time)  # You must be joking...
+v}
+
+{2:intro_cache Script cache and build log}
+
+The first time a [b0caml] script runs it gets compiled and cached.
+This incurs a small overhead. If you want to avoid it, or simply test
+that it compiles without running it use the [--compile] option:
+
+{v
+b0caml --compile local-time  # compile and cache the script
+v}
+
+{v
+b0caml log local-time     # Output build log of [local-time]
+b0caml log -l local-time  # More details...
+v}
+
+By default the script compilation cache location is determined
+according to the [XDG_CACHE_HOME] convention. The actual location of
+the cache can be printed via
+
+{v
+b0caml cache path               # print path to the cache
+b0caml cache delete local-time  # delete local-time build
+b0caml cache                    # delete the cache
+b0caml cache size               # print stats about the cache
+b0caml cache trim               # trim the cache to 50% of its size
+v}
+
+{1:configuration Configuration}
+
+Configuration is looked up in [XDG_CONFIG_DIR/b0caml/config].  The
+configuration file is a sequence of
+{{!B0_sexp_serialk.sexp_syntax}s-expressions}. Here's a sample file:
+
+{v
+(max-cache-size-mb 500)
+(compilation-target byte) ; force use of bytecode
+(ocamlopt)
+(compilation-env         ; Specify the OCaml compilation environment
+  (OCAMLPATH /usr/local/ocaml)
+  (PATH /usr/local/bin))
+v}
+
+The following keys are defined:
+
+{ul
+{- ({e cache-dir} PATH) cache directory}
+{- ({e max-cache-size-mb} SIZE) maximal cache size}
+{- ({e compilation-target} CODE) if both native and byte code are
+   available force to use [CODE] ([byte] or [native])}}
+
+{1:editor_conf Editor support}
+
+We hope to eventually convince [ocamlmerlin] to understand
+[#directory] directives and abide by [OCAMLPATH] the way [b0caml]
+does. This will have merlin work out of the box in your script without
+having to specify anything. If you are using [#mod_use] you will be
+punished accordingly.
+
+One thing that remains is for your editor to treat files with
+[b0caml]'s shebang line as an OCaml file. Follow the instructions
+below according to your editor.
+
+{2:emacs Emacs}
+
+Add one of the following line to your [.emacs] depending on the OCaml
+mode you are using.
+
+{v
+(add-to-list 'interpreter-mode-alist '("b0caml" . caml-mode))
+(add-to-list 'interpreter-mode-alist '("b0caml" . tuareg-mode))
+v}
+
+{1:ref_syntax Script language reference}
+
+{2:syntax Syntax}
+
+A [b0caml] script is an optional shebang line, followed by white space
+(no comments) separated directives, followed by an
+{{:http://caml.inria.fr/pub/docs/manual-ocaml-4.09/compunit.html#unit-implementation}OCaml unit implementation}.
+
+Using an {{:https://tools.ietf.org/html/rfc5234}RFC 5234} grammar this
+reads as:
+
+{v
+script     = [shebang] *(ws directive) ws unit-implementation
+shebang    = "!#" *(%x00-%xFF) nl
+directive  = dir-dir / dir-use
+dir-dir    = "#directory" ws %x22 dchar *dchar %x22
+dir-use    = "#mod_use" ws %x22 dchar *dchar %x22
+dchar      = escape / cont / ws / %x21 / %x23-%x5B / %x5D-%x7E / %x80-xFF
+escape     = %x5C (%x20 / %x22 / %x5C)
+cont       = %x5C nl ws
+ws         = *(%x20 / %x09 / %x0A / %x0B / %x0C / %x0D)
+nl         = %x0A / %x0D / %x0D %x0A
+unit-implementation = ... ; See the syntax in the OCaml manual
+v}
+
+This syntax is a subset of [ocaml]'s one. However [b0caml] attributes
+slightly different semantics to the directives.
+
+{2:semantics Semantics}
+
+The following parts can be distinguished in a [b0caml] script:
+
+{ol
+{- The optional shebang line. This is ignored by [b0caml].}
+{- The ordered sequence of directives. These can be separated in two
+   ordered list: those of [#directory] directives and those of
+   [#mod_use] directives.}
+{- The OCaml unit implementation.}}
+
+The final source of the script is created by concatenating the
+{{!mod_use_directive}expansion} of the [#mod_use] directives followed
+by the OCaml unit implementation. This source is
+{{!compilation}compiled} in a compilation environment defined by the
+[#directory] directives to a module or a program to be [exec]uted.
+
+{3:directory_directive [#directory] directive}
+
+The syntax of the [#directory] directive is:
+
+{[
+#directory "DIR"
+]}
+
+The semantics is to simply add the file path [DIR] to the ordered list
+of directories looked up for third-party modules. From a compilation
+perspective you can see that as [-I DIR] options given to the
+compiler.
+
+If [DIR] is relative it is made absolute with respect to the directory
+of the script. The [+DIR] syntax indicates to add all the existing
+[DIR] directories from the directories mentioned in the [OCAMLPATH]
+environment variable.
+
+The directories have to resolve to existing directories or the script
+errors. For [+DIR] it must exist in at least one of the directories of
+[OCAMLPATH].
+
+{3:mod_use_directive [#mod_use] directive}
+
+The syntax of the [#mod_use] directive is:
+
+{[
+#mod_use "PATH"
+]}
+
+The semantics is to define a module with the contents of [PATH] at
+that location. The name of the module is defined by
+{{!filename_mangling}mangling} the file name of [PATH].
+
+If [PATH] is relative it is interpreted relative to the script's
+directory.
+
+For example assuming the filename of [PATH] is [file.ml], the
+directive expands to:
+
+{[
+module File = struct
+#1 "PATH"
+(* contents of PATH *)
+end
+]}
+
+If [PATH] has a corresponding [.mli] file say [MLI] in the same
+directory, the directive expands to:
+
+{[
+module File : sig
+#line 1 "MLI"
+(* contents of MLI *)
+end = struct
+#line 1 "PATH"
+(* contents of PATH *)
+end
+]}
+
+{3:filename_mangling Filename mangling}
+
+[b0caml] uses the following filename mangling convention to produce
+OCaml module names from arbitrary filenames:
+
+{ol
+{- Remove any trailing [.ml] or [.mli].}
+{- Map any dash [-] (0x2D) or dot [.] (0x2E) to an underscore
+   [_] (0x5F).}
+{- Map any byte not allowed in OCaml compilation unit names to its two digit
+   capital hexadecimal encoding.}
+{- If the result does not start with an US-ASCII letter, prefix
+   the unit name with ['M'].}
+{- Capitalize the first letter.}}
+
+Note that the transformation is not injective. Here are a few examples:
+
+{v
+           filename   Module name
+ ----------------------------------------
+    publish-website   Publish_website
+    publish_website   Publish_website
+     import-data.ml   Import_data
+ import-data.xml.ml   Import_data_xml
+ import-data.script   Import_data_script
+          mix+match   Mix2Bmatch
+        _release.ml   M_release
+v}
+
+{3:exec Execution and exit codes}
+
+On script execution [b0caml] terminates with the exit code of you
+script. However that code may be determined by [b0caml] itself in case
+it doesn't get to execute the script.  These code may muddle with your
+own script's exit codes, here's the list of these:
+
+{ul
+{- [127], compilation error. This is what shells usually report with when
+   they can't find a command in the tool search path.}
+{- [125], unexpected internal error.}
+{- [124], command line parsing error.}
+{- [123], configuration error.}}
+
+{2:compilation Compilation}
+
+Given a script [script.ml] its final source [SRC] is extracted
+as defined {{!semantics}here}.
+
+{ol
+{- Create the final source [SRC] by expanding [script.ml]'s
+   [#mod_use] directive as described {{!directive_mod_use}here}
+   and appending [script.ml]'s OCaml compilation unit.}
+{- [SRC] is compiled to a byte or native code executable via
+   single invocation to the OCaml compiler, the includes specified
+   via [#directory] directives and all the library archives that
+   are found in these directories along with their dependencies
+   as determined by {!archive_lookup}archive dependency lookup}}
+
+
+{2:archive_lookup Archive dependency lookup}

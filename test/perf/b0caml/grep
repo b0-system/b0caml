@@ -1,0 +1,35 @@
+#!/usr/bin/env b0caml
+#directory "+re"
+#directory "+b0/std"
+
+open B0_std (* for the Fmt, Os and Fpath modules *)
+
+let err fmt = Fmt.pf Fmt.stderr (fmt ^^ "@.")
+let err_none e = err "%s" e; None
+let log_if_error r = Result.fold ~ok:Option.some ~error:err_none r
+
+let filepath s = log_if_error (Fpath.of_string s)
+let content p = Option.map (fun s -> p, s) (log_if_error (Os.File.read p))
+let match_content re (file, data) =
+  let matches line = if Re.execp re line then Some (file, line) else None in
+  List.filter_map matches (String.split_on_char '\n' data)
+
+let main () =
+  let pat, files = match List.tl (Array.to_list Sys.argv) with
+  | pat :: [] -> pat, [Os.File.dash] (* stdin *)
+  | pat :: files -> pat, List.filter_map filepath files
+  | [] -> err "usage: PATTERN FILE..."; exit 2
+  in
+  let re = match Re.Posix.(compile @@ re pat) with
+  | exception Re.Posix.Parse_error -> err "%S: parse error" pat; exit 2
+  | exception Re.Posix.Not_supported -> err "%S: parse error" pat; exit 2
+  | re -> re
+  in
+  let data = List.filter_map content files in
+  match List.concat_map (match_content re) data with
+  | [] -> ()
+  | matches ->
+      let pp_match ppf (p, m) = Fmt.pf ppf "@[%a: %s@]" Fpath.pp_unquoted p m in
+      Fmt.pf Fmt.stdout "@[<v>%a@]@." (Fmt.list pp_match) matches
+
+let () = if !Sys.interactive then () else main ()

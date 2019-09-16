@@ -1,0 +1,8 @@
+#!/usr/bin/env ocaml
+#use "topfind"
+#require "bos.setup"
+
+open Bos_setup
+
+let main () = Logs.app (fun m -> m "Hello bos!")
+let () = if !Sys.interactive then () else main ()

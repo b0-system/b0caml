@@ -1,0 +1,4 @@
+#!/usr/bin/env b0caml
+
+let echo oc ss = output_string oc (String.concat " " ss ^ "\n")
+let () = echo stdout (List.tl (Array.to_list Sys.argv))

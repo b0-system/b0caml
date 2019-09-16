@@ -1,0 +1,6 @@
+#!/usr/bin/env b0caml
+#mod_use "conf.ml"
+
+let scream = match Conf.lang with | "fr" -> "Miaou!" | _ -> "Miaow!"
+let main () = print_endline scream
+let () = if !Sys.interactive then () else main ()

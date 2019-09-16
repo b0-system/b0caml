@@ -1,0 +1,12 @@
+#!/usr/bin/env ocaml
+#use "topfind"
+#require "ptime"
+#require "ptime.clock.os"
+
+let to_string () =
+  let now = Ptime_clock.now () in
+  let tz_offset_s = Ptime_clock.current_tz_offset_s () in
+  Format.asprintf "%a" (Ptime.pp_human ?tz_offset_s ()) now
+
+let main () = print_endline (to_string ())
+let () = if !Sys.interactive then () else main ()

@@ -1,0 +1,10 @@
+#!/usr/bin/env ocaml
+
+#directory "+notnonot"
+#directory "thatdir"
+
+#mod_use "that_module.ml"
+
+#directory "/that/could/exist"
+
+#mod_use "/that/could/also/exist.ml"

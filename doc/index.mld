@@ -1,0 +1,43 @@
+{0 B0caml {%html: <span class="version">%%VERSION%%</span>%}}
+
+[b0caml] runs OCaml scripts like [ocaml]. However it provides direct
+support for using third-party modules and compiles scripts
+transparently to a cache of native (or bytecode) executables.
+
+Consult the {{!page-manual}manual} and its
+{{!page-manual.intro}tutorial introduction}.
+
+{1:quick_start Quick start}
+
+A few invocations to get you started.
+
+{[
+cat > echo <<EOCAML
+#!/usr/bin/env b0caml
+
+let echo oc ss = output_string oc (String.concat " " ss ^ "\n")
+let () = echo stdout (List.tl (Array.to_list Sys.argv))
+EOCAML
+> chmod +x ./echo
+> ./echo grunt
+grunt
+> b0caml ./echo grunt  # for Windows compatible invocations
+grunt
+]}
+
+Read how to {{!page-manual.intro_using_mods}use third-party modules} and more in
+the {{!page-manual.intro}tutorial introduction}.
+
+{1:api API}
+
+This is an unstable API subject to change even between minor versions
+of the tool. Use at your own risk.
+
+{!modules:
+B0caml_opam
+B0caml_ocamlpath
+B0caml_resolver
+B0caml
+B0caml_cli
+B0caml_script
+}

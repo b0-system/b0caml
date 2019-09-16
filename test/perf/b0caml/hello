@@ -1,0 +1,2 @@
+#!/usr/bin/env b0caml
+print_endline "Hello!"
