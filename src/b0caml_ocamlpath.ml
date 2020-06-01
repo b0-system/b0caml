@@ -95,7 +95,7 @@ let logical_dir_suggestions ~logical_dirs:dirs dir =
   let ds = String.suggest dirs dir in
   if ds <> [] then some ds else
   let ds = match List.mem dir_root dirs with
-  | true -> List.filter (fun f -> String.is_prefix dir_root f) dirs
+  | true -> List.filter (fun f -> String.starts_with dir_root f) dirs
   | false -> String.suggest dirs dir
   in
   if ds <> [] then some ds else None

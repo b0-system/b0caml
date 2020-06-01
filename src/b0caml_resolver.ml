@@ -4,7 +4,9 @@
   ---------------------------------------------------------------------------*)
 
 open B00_std
+open B00_std.Fut.Syntax
 open B00
+open B00_ocaml
 
 let ocamlpath_root_dirs ~ocamlpath =
   let add_dir acc dir =
@@ -21,15 +23,14 @@ type t =
     ocamlpath : B0caml_ocamlpath.t;
     ocamlpath_root_dirs : Fpath.t list String.Map.t;
     mutable dir_dirs : Fpath.Set.t Fpath.Map.t;
-    mutable dir_cobjs :
-      B00_ocaml.Cobj.t list Memo.Fut.t Fpath.Map.t; (* Mapped by dir. *)
-    mutable mod_ref_cobj : B00_ocaml.Cobj.t list B00_ocaml.Mod_ref.Map.t; }
+    mutable dir_cobjs : Cobj.t list Fut.t Fpath.Map.t; (* Mapped by dir. *)
+    mutable mod_ref_cobj : Cobj.t list Mod.Ref.Map.t; }
 
 let create m ~memo_dir ~ocamlpath =
   { m; memo_dir; ocamlpath;
     ocamlpath_root_dirs = ocamlpath_root_dirs ~ocamlpath;
     dir_dirs = Fpath.Map.empty;
-    dir_cobjs = Fpath.Map.empty; mod_ref_cobj = B00_ocaml.Mod_ref.Map.empty }
+    dir_cobjs = Fpath.Map.empty; mod_ref_cobj = Mod.Ref.Map.empty }
 
 let ocamlpath r = r.ocamlpath
 
@@ -46,7 +47,7 @@ let index_dir ~ext r dir =
 let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
 | info -> info
 | exception Not_found ->
-    let info, set_info = Memo.Fut.create r.m in
+    let info, set_info = Fut.create () in
     r.dir_cobjs <- Fpath.Map.add dir info r.dir_cobjs;
     begin
       let cobjs = index_dir ~ext r dir in
@@ -59,22 +60,24 @@ let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
       if ext = ".cmxa" then begin
         List.iter (fun o -> Memo.file_ready r.m (Fpath.set_ext ".a" o)) cobjs
       end;
-      B00_ocaml.Cobj.write r.m ~cobjs ~o;
-      B00_ocaml.Cobj.read r.m o @@ fun cobjs ->
+      Cobj.write r.m ~cobjs ~o;
+      ignore @@
+      let* cobjs = Cobj.read r.m o in
       let add_mod_ref cobj def =
         r.mod_ref_cobj <-
-          B00_ocaml.Mod_ref.Map.add_to_list def cobj r.mod_ref_cobj
+          Mod.Ref.Map.add_to_list def cobj r.mod_ref_cobj
       in
       let add_mod_refs cobj =
-        B00_ocaml.Mod_ref.Set.iter (add_mod_ref cobj) (B00_ocaml.Cobj.defs cobj)
+        Mod.Ref.Set.iter (add_mod_ref cobj) (Cobj.defs cobj)
       in
       List.iter add_mod_refs cobjs;
-      set_info (Some cobjs)
+      set_info cobjs;
+      Fut.return ()
     end;
     info
 
 let try_find_mod_ref_root_dir r ref =
-  let name = String.Ascii.lowercase (B00_ocaml.Mod_ref.name ref) in
+  let name = String.Ascii.lowercase (Mod.Ref.name ref) in
   match String.Map.find name r.ocamlpath_root_dirs with
   | p -> Some p
   | exception Not_found ->
@@ -85,88 +88,70 @@ let try_find_mod_ref_root_dir r ref =
           | p -> Some p
           | exception Not_found -> None
 
-let amb r ~ext ref cobjs k =
+let amb r ~ext ref cobjs =
   let pext = ".p" ^ ext in (* TODO doc filter out profile objects *)
-  let not_pext cobj = not (Fpath.has_ext pext (B00_ocaml.Cobj.file cobj)) in
+  let not_pext cobj = not (Fpath.has_ext pext (Cobj.file cobj)) in
   match List.filter not_pext cobjs with
-  | [cobj] ->
-      k (Some cobj)
+  | [cobj] -> Fut.return (Some cobj)
   | cobjs ->
       (* FIXME constraints. *)
       Memo.notify r.m `Info "@[<v>ambiguous resolution for %a:@,%a@]"
-        B00_ocaml.Mod_ref.pp ref (Fmt.list B00_ocaml.Cobj.pp) cobjs;
-      k None
+        Mod.Ref.pp ref (Fmt.list Cobj.pp) cobjs;
+      Fut.return None
 
-let find_archive_for_mod_ref r ~ext ref k =
-  match B00_ocaml.Mod_ref.Map.find ref r.mod_ref_cobj with
-  | [cobj] -> k (Some cobj)
-  | cobjs -> amb r ~ext ref cobjs k
+let find_archive_for_mod_ref r ~ext ref =
+  match Mod.Ref.Map.find ref r.mod_ref_cobj with
+  | [cobj] -> Fut.return (Some cobj)
+  | cobjs -> amb r ~ext ref cobjs
   | exception Not_found ->
       match try_find_mod_ref_root_dir r ref with
-      | None -> k None
+      | None -> Fut.return None
       | Some roots ->
           let root = List.hd roots (* FIXME *) in
-          Memo.Fut.await (get_cobjs_info r ~ext root) @@ fun _ ->
-          match B00_ocaml.Mod_ref.Map.find ref r.mod_ref_cobj with
-          | [cobj] -> k (Some cobj)
-          | cobjs -> amb r ~ext ref cobjs k
+          let* _ = get_cobjs_info r ~ext root in
+          match Mod.Ref.Map.find ref r.mod_ref_cobj with
+          | [cobj] -> Fut.return (Some cobj)
+          | cobjs -> amb r ~ext ref cobjs
           | exception Not_found ->
-              k None (* TODO subdirs and eventually whole scan *)
+              Fut.return None (* TODO subdirs and eventually whole scan *)
 
-let rec find_mod_refs r ~deps ~ext cobjs defined todo k =
-  match B00_ocaml.Mod_ref.Set.choose todo with
+let rec find_mod_refs r ~deps ~ext cobjs defined todo =
+  match Mod.Ref.Set.choose todo with
   | exception Not_found ->
-      let cobjs = B00_ocaml.Cobj.Set.elements cobjs in
-      let cobjs, _ = B00_ocaml.Cobj.sort ~deps cobjs in
-      k cobjs
+      let cobjs = Cobj.Set.elements cobjs in
+      let cobjs, _ = Cobj.sort ~deps cobjs in
+      Fut.return cobjs
   | ref ->
-      let todo = B00_ocaml.Mod_ref.Set.remove ref todo in
-      match B00_ocaml.Mod_ref.Set.mem ref defined with
-      | true -> find_mod_refs r ~deps ~ext cobjs defined todo k
+      let todo = Mod.Ref.Set.remove ref todo in
+      match Mod.Ref.Set.mem ref defined with
+      | true -> find_mod_refs r ~deps ~ext cobjs defined todo
       | false ->
-          find_archive_for_mod_ref r ~ext ref @@ function
+          Fut.bind (find_archive_for_mod_ref r ~ext ref) @@ function
           | None ->
-              Memo.notify r.m `Info
-                "No resolution for %a" B00_ocaml.Mod_ref.pp ref;
-              find_mod_refs r ~deps ~ext cobjs defined todo k
+              Memo.notify r.m `Info "No resolution for %a" Mod.Ref.pp ref;
+              find_mod_refs r ~deps ~ext cobjs defined todo
           | Some cobj ->
-              let cobjs = B00_ocaml.Cobj.Set.add cobj cobjs in
-              let defined =
-                B00_ocaml.Mod_ref.Set.union (B00_ocaml.Cobj.defs cobj) defined
-              in
-              let new_refs =
-                B00_ocaml.Mod_ref.Set.diff (deps cobj) defined
-              in
-              let todo = B00_ocaml.Mod_ref.Set.union todo new_refs in
-              find_mod_refs r ~deps ~ext cobjs defined todo k
+              let cobjs = Cobj.Set.add cobj cobjs in
+              let defined = Mod.Ref.Set.union (Cobj.defs cobj) defined in
+              let new_refs = Mod.Ref.Set.diff (deps cobj) defined in
+              let todo = Mod.Ref.Set.union todo new_refs in
+              find_mod_refs r ~deps ~ext cobjs defined todo
 
-let find_archives_and_deps ?(deps = B00_ocaml.Cobj.link_deps) r ~code ~dirs k =
-  let ext = match code with
-  | B00_ocaml.Cobj.Byte -> ".cma"
-  | B00_ocaml.Cobj.Native -> ".cmxa"
-  in
-  let get_root_cobjs ~ext dirs k =
-    let rec loop acc = function
-    | [] -> k acc
-    | cobjs :: cobjss ->
-        Memo.Fut.await cobjs @@ fun cobjs ->
-        loop (List.rev_append acc cobjs) cobjss
-    in
-    loop [] (List.map (get_cobjs_info r ~ext) dirs)
-  in
-  get_root_cobjs ~ext dirs @@ fun roots ->
+let find_archives_and_deps ?(deps = Cobj.link_deps) r ~code ~dirs =
+  let ext = match code with `Byte -> ".cma" | `Native -> ".cmxa" in
+  let* roots = Fut.of_list (List.map (get_cobjs_info r ~ext) dirs) in
+  let roots = List.concat roots in
   let defined, to_find =
     let rec loop defs ldeps = function
-    | [] -> defs, B00_ocaml.Mod_ref.Set.diff ldeps defs
+    | [] -> defs, Mod.Ref.Set.diff ldeps defs
     | cobj :: cobjs ->
-      let defs = B00_ocaml.Mod_ref.Set.union (B00_ocaml.Cobj.defs cobj) defs in
-      let ldeps = B00_ocaml.Mod_ref.Set.union (deps cobj) ldeps in
+      let defs = Mod.Ref.Set.union (Cobj.defs cobj) defs in
+      let ldeps = Mod.Ref.Set.union (deps cobj) ldeps in
       loop defs ldeps cobjs
     in
-    loop B00_ocaml.Mod_ref.Set.empty B00_ocaml.Mod_ref.Set.empty roots
+    loop Mod.Ref.Set.empty Mod.Ref.Set.empty roots
   in
-  find_mod_refs r ~deps ~ext
-    (B00_ocaml.Cobj.Set.of_list roots) defined to_find k
+  find_mod_refs r ~deps ~ext (Cobj.Set.of_list roots) defined to_find
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 The b0 programmers

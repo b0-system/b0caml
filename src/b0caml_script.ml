@@ -271,7 +271,7 @@ let src ~mod_use_resolutions s =
   let add_mod_name n acc = n :: "module " :: acc in
   let add_dep_src acc (intf_file, impl_file, meta) =
     let name = Fpath.basename impl_file in
-    let name = B00_ocaml.Mod_name.of_mangled_filename name in
+    let name = B00_ocaml.Mod.Name.of_mangled_filename name in
     let impl = read impl_file meta in
     match intf_file with
     | None -> add_mod_impl impl_file impl @@ add_mod_name name acc

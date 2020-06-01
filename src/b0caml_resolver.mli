@@ -7,6 +7,7 @@
 
 open B00_std
 open B00
+open B00_ocaml
 
 type t
 (** The type for library resolvers. *)
@@ -15,9 +16,8 @@ val create : Memo.t -> memo_dir:Fpath.t -> ocamlpath:B0caml_ocamlpath.t -> t
 
 val ocamlpath : t ->  B0caml_ocamlpath.t
 val find_archives_and_deps :
-  ?deps:(B00_ocaml.Cobj.t -> B00_ocaml.Mod_ref.Set.t) -> t ->
-  code:B00_ocaml.Cobj.code -> dirs:B00_std.Fpath.t list ->
-  B00_ocaml.Cobj.t list Memo.fiber
+  ?deps:(Cobj.t -> Mod.Ref.Set.t) -> t ->
+  code:Conf.code -> dirs:B00_std.Fpath.t list -> Cobj.t list Fut.t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 The b0 programmers
