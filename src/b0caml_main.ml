@@ -19,7 +19,7 @@ let main_without_cli script_file script_args =
     Result.bind (B0caml.Conf.setup_without_cli ()) @@ fun c ->
     Result.bind (B0caml.get_script c script_file) @@ fun s ->
     Result.bind (B0caml.compile_script c s) @@ fun exe ->
-    Ok (B0caml.Exit.Exec (exe, Cmd.args (script_file :: script_args)))
+    Ok (B0caml.Exit.Exec (exe, Cmd.list (script_file :: script_args)))
   in
   exit_main res
 

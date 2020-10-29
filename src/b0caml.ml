@@ -224,8 +224,8 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let reads = src_file :: archives (* FIXME add C libs. *) in
   List.iter (B00.Memo.file_ready m) archives;
   B00.Memo.spawn m ~reads ~writes @@
-  comp Cmd.(arg "-o" %% unstamp (path exe) %% arg "-nostdlib" %%
-            arg "-opaque" %%
+  comp Cmd.(atom "-o" %% unstamp (path exe) %% atom "-nostdlib" %%
+            atom "-opaque" %%
             (unstamp @@ (incs %% paths archives %% path src_file)));
   Fut.return ()
 

@@ -9,9 +9,9 @@ open B00_std
 
 let uninstalled ?search ?switch () =
   let switch = match switch with
-  | None -> Cmd.empty | Some s -> Cmd.(arg "--switch" % s)
+  | None -> Cmd.empty | Some s -> Cmd.(atom "--switch" % s)
   in
-  let opam_list = Cmd.(arg "opam" % "list" %% switch % "--short") in
+  let opam_list = Cmd.(atom "opam" % "list" %% switch % "--short") in
   Result.bind (Os.Cmd.find ?search opam_list) @@ function
   | None -> Ok String.Set.empty
   | Some opam_list ->

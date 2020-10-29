@@ -13,13 +13,13 @@ let b0caml = B0_ocaml.libname "b0caml"
 
 let b0caml_lib =
   let requires = [cmdliner; b0_b00_std; b0_b00; b0_b00_kit] in
-  let srcs = [`Dir "src"; `X "src/b0caml_main.ml";] in
+  let srcs = Fpath.[`Dir (v "src"); `X (v "src/b0caml_main.ml");] in
   let name = "lib" in
   B0_ocaml.lib b0caml ~name ~doc:"B0caml support library" ~requires ~srcs
 
 let b0caml =
   let requires = [cmdliner; b0_b00_std; b0_b00; b0_b00_kit; b0caml] in
-  let srcs = [`File "src/b0caml_main.ml"] in
+  let srcs = Fpath.[`File (v "src/b0caml_main.ml")] in
   B0_ocaml.exe "b0caml" ~doc:"b0caml tool" ~requires ~srcs
 
 (* Packs *)

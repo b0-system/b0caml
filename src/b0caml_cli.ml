@@ -132,7 +132,7 @@ let exec_cmd c mode script_file script_args =
       Ok B0caml.Exit.ok
   | `Exec ->
       Result.bind (B0caml.compile_script c s) @@ fun exe ->
-      let cmd = Cmd.args (script_file :: script_args) in
+      let cmd = Cmd.list (script_file :: script_args) in
       Ok (B0caml.Exit.Exec (exe, cmd))
   | `Utop -> failwith "TODO"
   | `Top -> failwith "TODO"

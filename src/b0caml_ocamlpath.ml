@@ -56,8 +56,8 @@ let get ?search = function
               Result.bind (Os.Cmd.run_out ~trim:true cmd) @@ fun s ->
               Result.map Option.some (Fpath.of_string s)
         in
-        let opam_lib = fpath_of_cmd Cmd.(arg "opam" % "var" % "lib") in
-        let ocaml_where = fpath_of_cmd Cmd.(arg "ocamlc" % "-where") in
+        let opam_lib = fpath_of_cmd Cmd.(atom "opam" % "var" % "lib") in
+        let ocaml_where = fpath_of_cmd Cmd.(atom "ocamlc" % "-where") in
         Result.bind opam_lib @@ fun opam_lib ->
         Result.bind ocaml_where @@ fun ocaml_where ->
         match opam_lib, ocaml_where with
