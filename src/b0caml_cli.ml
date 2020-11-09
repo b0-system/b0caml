@@ -86,7 +86,7 @@ let deps_cmd c script_file raw directory mod_use root =
   | true ->
       let directories = B0caml_script.directories s in
       let root (d, _) = B0caml_ocamlpath.logical_path_root_name d in
-      let roots = String.uniquify (List.filter_map root directories) in
+      let roots = String.distinct (List.filter_map root directories) in
       let pp_roots = Fmt.(vbox @@ list string) in
       if roots <> [] then Log.app (fun m -> m "%a" pp_roots roots);
       Ok B0caml.Exit.ok

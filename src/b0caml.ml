@@ -199,10 +199,11 @@ let byte_comp m = B00.Memo.tool m B00_ocaml.Tool.ocamlc, `Byte
 let native_comp m = B00.Memo.tool m B00_ocaml.Tool.ocamlopt, `Native
 
 let find_comp c m = match Conf.comp_target c with
-| `Byte -> byte_comp m
-| `Native -> native_comp m
+| `Byte -> Fut.return (byte_comp m)
+| `Native -> Fut.return (native_comp m)
 | `Auto ->
-    match B00.Memo.tool_opt m B00_ocaml.Tool.ocamlopt with
+    let* ocamlopt = B00.Memo.tool_opt m B00_ocaml.Tool.ocamlopt in
+    Fut.return @@ match ocamlopt with
     | None -> byte_comp m
     | Some comp -> comp, `Native
 
@@ -214,7 +215,7 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let* archives = B0caml_resolver.find_archives_and_deps r ~code ~dirs in
   let archives = List.map B00_ocaml.Cobj.file archives in
   let incs = Cmd.unstamp @@ Cmd.paths ~slip:"-I" dirs in
-  let base = Fpath.rem_ext src_file in
+  let base = Fpath.strip_ext src_file in
   let writes = match code with
   | `Byte -> [ Fpath.(base + ".cmo") ]
   | `Native -> [ Fpath.(base + ".cmx"); Fpath.(base + ".o") ]
@@ -256,9 +257,9 @@ let compile_script c s =
       let build_dir = script_build_dir c (B0caml_script.file s) in
       let src_file = Fpath.(build_dir / "src.ml") in
       let exe = Fpath.(build_dir / "exe") in
-      let comp = find_comp c m in
       begin
         ignore @@
+        let* comp = find_comp c m in
         (* FIXME gets also rid of log, but is needed
            for src updates. Needs to fix b0
            B00.Memo.delete m build_dir @@ fun () -> *)
