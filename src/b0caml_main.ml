@@ -24,14 +24,16 @@ let main_without_cli script_file script_args =
   exit_main res
 
 let main_with_cli () =
-  let res =
-    run_main @@ fun () ->
-    let b0caml, cmds = B0caml_cli.cmds () in
-    Cmdliner.Term.eval_choice b0caml cmds
+  let res = run_main @@ fun () -> Cmdliner.Cmd.eval_value (B0caml_cli.cmd ()) in
+  let exit = match res with
+  | Ok (`Ok res) -> res
+  | Ok `Version ->  B0caml.Exit.ok
+  | Ok `Help -> B0caml.Exit.ok
+  | Error `Term -> B0caml.Exit.conf_error
+  | Error `Parse -> B0caml.Exit.Code Cmdliner.Cmd.Exit.cli_error
+  | Error `Exn -> B0caml.Exit.Code Cmdliner.Cmd.Exit.internal_error
   in
-  match res with
-  | `Ok res -> exit_main res
-  | e -> Cmdliner.Term.exit ~term_err:B0caml.Exit.(code conf_error) e
+  exit_main exit
 
 let main () =
   try match List.tl (Array.to_list Sys.argv) with
@@ -42,7 +44,7 @@ let main () =
       let bt = Printexc.get_raw_backtrace () in
       Fmt.epr "%s: @[internal error, uncaught exception:@\n%a@]@."
         (Filename.basename Sys.argv.(0)) Fmt.exn_backtrace (e, bt);
-      exit (Cmdliner.Term.exit_status_internal_error)
+      exit (Cmdliner.Cmd.Exit.internal_error)
 
 let () = if !Sys.interactive then () else main ()
 

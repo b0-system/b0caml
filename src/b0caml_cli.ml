@@ -19,7 +19,8 @@ let delete_script_cache c script =
       in
       let keys = List.fold_left add_key [] (B00_cli.Memo.Log.ops log) in
       let dir = B0caml.Conf.b0_cache_dir c in
-      Result.bind (B00_cli.File_cache.delete ~dir (`Keys keys)) @@ fun _ -> Ok ()
+      Result.bind (B00_cli.File_cache.delete ~dir (`Keys keys)) @@
+      fun _ -> Ok ()
 
 let show_script_path c script =
   Result.bind (B0caml.get_script_file c script) @@ fun script_file ->
@@ -162,7 +163,7 @@ let conf () =
       let doc = "Force default compilation target to $(b,byte), $(b,native) \
                  or $(b,auto). See $(b,--byte) and $(b,--native) options."
       in
-      Arg.env_var ~doc B0caml.Env.comp_target
+      Cmd.Env.info ~doc B0caml.Env.comp_target
     in
     let targets =
       let t enum arg doc = Some enum, Arg.info [arg] ~doc ~docs ~env in
@@ -181,18 +182,18 @@ let conf () =
     Term.(const target $ cli_arg)
   in
   let cache_dir =
-    let env = Arg.env_var B0caml.Env.cache_dir in
+    let env = Cmd.Env.info B0caml.Env.cache_dir in
     let doc = "Cache directory." and docv = "PATH" in
     let none = "$(b,XDG_CACHE_HOME)/b0caml" in
     Arg.(value & opt (Arg.some ~none B00_cli.fpath) None &
          info ["cache-dir"] ~doc ~docv ~docs ~env)
   in
   let tty_cap =
-    let env = Arg.env_var B0caml.Env.color in
+    let env = Cmd.Env.info B0caml.Env.color in
     B00_cli.B00_std.tty_cap ~docs ~env ()
   in
   let log_level =
-    let env = Arg.env_var B0caml.Env.verbosity in
+    let env = Cmd.Env.info B0caml.Env.verbosity in
     B00_cli.B00_std.log_level ~docs ~env ()
   in
   let conf cache_dir tty_cap log_level comp_target =
@@ -200,24 +201,24 @@ let conf () =
   in
   Term.(const conf $ cache_dir $ tty_cap $ log_level $ comp_target)
 
-let cmds () =
+let cmd () =
   let exit_info c doc = match c with
-  | B0caml.Exit.Code c -> Term.exit_info c ~doc
+  | B0caml.Exit.Code c -> Cmd.Exit.info c ~doc
   | _ -> assert false
   in
   let exits =
     exit_info B0caml.Exit.conf_error "on configuration error." ::
-    Term.default_exits
+    Cmd.Exit.defaults
   in
   let some_error_exit =
     exit_info B0caml.Exit.some_error
       "on indiscriminate errors reported on stderr."
   in
   let exec_exits =
-    Term.exit_info 0 ~max:255
+    Cmd.Exit.info 0 ~max:255
       ~doc:"on script execution, the script exit code." ::
-    exit_info B0caml.Exit.comp_error
-      "on script compilation error." :: exits
+    exit_info B0caml.Exit.comp_error "on script compilation error." ::
+    exits
   in
   let conf = conf () in
   let sdocs = Manpage.s_common_options in
@@ -267,8 +268,8 @@ let cmds () =
       let doc = "The script(s)." and docv = "SCRIPT" in
       Arg.(value & pos_right 0 string [] & info [] ~doc ~docv)
     in
-    Term.(const cache_cmd $ conf $ action $ scripts),
-    Term.info "cache" ~doc ~sdocs ~exits ~man ~man_xrefs
+    Cmd.v (Cmd.info "cache" ~doc ~sdocs ~exits ~man ~man_xrefs)
+      Term.(const cache_cmd $ conf $ action $ scripts)
   in
   let deps_cmd =
     let doc = "Show script dependencies" in
@@ -302,11 +303,11 @@ let cmds () =
     let raw =
       flag "raw" "Show raw directive arguments without resolving them."
     in
-    Term.(const deps_cmd $ conf $ script_file $ raw $ directory $
-          mod_use $ root),
-    Term.info "deps" ~doc ~sdocs ~exits ~man ~man_xrefs
+    Cmd.v (Cmd.info "deps" ~doc ~sdocs ~exits ~man ~man_xrefs)
+      Term.(const deps_cmd $ conf $ script_file $ raw $ directory $
+            mod_use $ root)
   in
-  let exec_cmd =
+  let exec_cmd, exec_term =
     let doc = "Execute script (default command)" and  man_xrefs = [`Main ] in
     let man = [
       `S Manpage.s_description;
@@ -338,8 +339,8 @@ let cmds () =
       let doc = "Argument for the script." and docv = "ARG" in
       Arg.(value & pos_right 0 string [] & info [] ~doc ~docv)
     in
-    Term.(const exec_cmd $ conf $ mode $ script_file $ args),
-    Term.info "exec" ~doc ~sdocs ~exits ~man ~man_xrefs
+    let term = Term.(const exec_cmd $ conf $ mode $ script_file $ args) in
+    Cmd.v (Cmd.info "exec" ~doc ~sdocs ~exits ~man ~man_xrefs) term, term
   in
   let log_cmd =
     let doc = "Show script build logs" in
@@ -359,11 +360,11 @@ let cmds () =
     let exits =
       exit_info B0caml.Exit.miss_dep_error "on missing log." :: exits
     in
-    Term.(const log_cmd $ conf $ script_file $ B00_pager.don't () $
-          B00_cli.Memo.Log.out_format_cli ~docs:docs_details () $
-          B00_cli.Arg.output_details ~docs:docs_format () $
-          B00_cli.Op.query_cli ~docs:docs_select ()),
-    Term.info "log" ~doc ~sdocs ~exits ~envs ~man ~man_xrefs
+    Cmd.v (Cmd.info "log" ~doc ~sdocs ~exits ~envs ~man ~man_xrefs)
+      Term.(const log_cmd $ conf $ script_file $ B00_pager.don't () $
+            B00_cli.Memo.Log.out_format_cli ~docs:docs_details () $
+            B00_cli.Arg.output_format ~docs:docs_format () $
+            B00_cli.Op.query_cli ~docs:docs_select ())
   in
   let main_cmd =
     let doc = "Easy OCaml scripts" in
@@ -389,11 +390,11 @@ let cmds () =
       `P "Report them, see $(i,%%PKG_HOMEPAGE%%) for contact information."; ]
     in
     let exits = exec_exits in
-    fst exec_cmd,
-    Term.info "b0caml" ~version:"%%VERSION%%" ~doc ~sdocs ~exits ~man
+    Cmd.group
+      Cmd.(info "b0caml" ~version:"%%VERSION%%" ~doc ~sdocs ~exits ~man)
+      ~default:exec_term [cache_cmd; deps_cmd; exec_cmd; log_cmd;]
   in
-  let cmds = [cache_cmd; deps_cmd; exec_cmd; log_cmd;] in
-  main_cmd, cmds
+  main_cmd
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 The b0caml programmers

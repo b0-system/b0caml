@@ -3,13 +3,10 @@
    Distributed under the ISC license, see terms at the end of the file.
   ---------------------------------------------------------------------------*)
 
-(** [b0caml] cmdliner commands. *)
+(** [b0caml] cmdliner command. *)
 
-val cmds :
-  unit ->
-  (B0caml.Exit.t Cmdliner.Term.t * Cmdliner.Term.info) *
-  (B0caml.Exit.t Cmdliner.Term.t * Cmdliner.Term.info) list
-(** [cmdliner] main and sub commands for [b0caml]. *)
+val cmd : unit -> B0caml.Exit.t Cmdliner.Cmd.t
+(** [cmdliner] command for [b0caml]. *)
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 The b0caml programmers
