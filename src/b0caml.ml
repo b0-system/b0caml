@@ -254,7 +254,7 @@ let compile_script c s =
       Result.bind (Conf.memo c) @@ fun m ->
       let memo_dir = Fpath.(Conf.cache_dir c / "lib_resolve") in
       let r = B0caml_resolver.create m ~memo_dir ~ocamlpath in
-      let build_dir = script_build_dir c (B0caml_script.file s) in
+      let build_dir = script_build_dir c ~script_file:(B0caml_script.file s) in
       let src_file = Fpath.(build_dir / "src.ml") in
       let exe = Fpath.(build_dir / "exe") in
       begin
