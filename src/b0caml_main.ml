@@ -3,7 +3,7 @@
    Distributed under the ISC license, see terms at the end of the file.
   ---------------------------------------------------------------------------*)
 
-open B00_std
+open B0_std
 
 let run_main f = Log.time (fun _ m -> m "total time b0caml %%VERSION%%") f
 let exit_main = function

@@ -5,7 +5,7 @@
 
 (** [opam] support, move to [B00_kit]. *)
 
-open B00_std
+open B0_std
 
 (** {1:pkg_list Listing packages} *)
 

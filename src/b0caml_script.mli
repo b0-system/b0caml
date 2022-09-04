@@ -5,7 +5,7 @@
 
 (** OCaml scripts *)
 
-open B00_std
+open B0_std
 open B00_serialk_text
 
 (** {1:meta Syntactic metadata} *)

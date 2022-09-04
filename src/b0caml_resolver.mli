@@ -5,7 +5,7 @@
 
 (** Library resolver *)
 
-open B00_std
+open B0_std
 open B00
 open B00_ocaml
 
@@ -17,7 +17,7 @@ val create : Memo.t -> memo_dir:Fpath.t -> ocamlpath:B0caml_ocamlpath.t -> t
 val ocamlpath : t ->  B0caml_ocamlpath.t
 val find_archives_and_deps :
   ?deps:(Cobj.t -> Mod.Ref.Set.t) -> t ->
-  code:Conf.code -> dirs:B00_std.Fpath.t list -> Cobj.t list Fut.t
+  code:Conf.code -> dirs:B0_std.Fpath.t list -> Cobj.t list Fut.t
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 The b0 programmers

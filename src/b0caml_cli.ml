@@ -3,7 +3,7 @@
    Distributed under the ISC license, see terms at the end of the file.
   ---------------------------------------------------------------------------*)
 
-open B00_std
+open B0_std
 
 let delete_script_cache c script =
   Result.bind (B0caml.get_script_file c script) @@ fun script_file ->
@@ -190,11 +190,11 @@ let conf () =
   in
   let tty_cap =
     let env = Cmd.Env.info B0caml.Env.color in
-    B00_cli.B00_std.tty_cap ~docs ~env ()
+    B00_cli.B0_std.tty_cap ~docs ~env ()
   in
   let log_level =
     let env = Cmd.Env.info B0caml.Env.verbosity in
-    B00_cli.B00_std.log_level ~docs ~env ()
+    B00_cli.B0_std.log_level ~docs ~env ()
   in
   let conf cache_dir tty_cap log_level comp_target =
     B0caml.Conf.setup_with_cli ~cache_dir ~comp_target ~tty_cap ~log_level ()

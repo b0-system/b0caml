@@ -5,7 +5,7 @@
 
 (** [OCAMLPATH] support move to B0_care. *)
 
-open B00_std
+open B0_std
 
 (** {1:logical Logical paths} *)
 

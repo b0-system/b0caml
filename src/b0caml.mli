@@ -5,7 +5,7 @@
 
 (** [b0caml] support. *)
 
-open B00_std
+open B0_std
 
 (** [b0caml] exit codes. *)
 module Exit : sig

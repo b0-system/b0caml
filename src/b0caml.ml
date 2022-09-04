@@ -3,8 +3,8 @@
    Distributed under the ISC license, see terms at the end of the file.
   ---------------------------------------------------------------------------*)
 
-open B00_std
-open B00_std.Fut.Syntax
+open B0_std
+open B0_std.Fut.Syntax
 
 module Exit = struct
   type t = Code of int | Exec of Fpath.t * Cmd.t
@@ -83,9 +83,9 @@ module Conf = struct
     Os.Env.find' ~empty_is_none:true parse var |> Log.if_error ~use:None
 
   let setup ~cache_dir ~comp_target ~log_level ~tty_cap () =
-    let tty_cap = B00_cli.B00_std.get_tty_cap tty_cap in
-    let log_level = B00_cli.B00_std.get_log_level log_level in
-    B00_cli.B00_std.setup tty_cap log_level ~log_spawns:Log.Debug;
+    let tty_cap = B00_cli.B0_std.get_tty_cap tty_cap in
+    let log_level = B00_cli.B0_std.get_log_level log_level in
+    B00_cli.B0_std.setup tty_cap log_level ~log_spawns:Log.Debug;
     Result.bind (Os.Dir.cwd ()) @@ fun cwd ->
     Result.bind (get_cache_dir ~cwd cache_dir) @@ fun cache_dir ->
     let comp_target = get_comp_target comp_target in
@@ -96,7 +96,7 @@ module Conf = struct
   let setup_without_cli () =
     let cache_dir = env_find Fpath.of_string Env.cache_dir in
     let comp_target = env_find comp_target_of_string Env.comp_target in
-    let tty_cap = env_find B00_cli.B00_std.tty_cap_of_string Env.color in
+    let tty_cap = env_find B00_cli.B0_std.tty_cap_of_string Env.color in
     let log_level = env_find Log.level_of_string Env.verbosity in
     setup ~cache_dir ~comp_target ~tty_cap ~log_level ()
 end
@@ -162,7 +162,7 @@ let script_build_dir c ~script_file =
   (* A bit unclear what we want to use here maybe add what
      affects compilation environment *)
   let file = Fpath.to_string @@ script_file in
-  let hash = Hash.to_hex @@ Hash.Xxh_64.string file in
+  let hash = Hash.to_hex @@ Hash.Xxh3_64.string file in
   Fpath.(Conf.cache_dir c / hash)
 
 let get_script c file =
