@@ -61,7 +61,7 @@ modules are installed by the [ptime] package in the [ptime] and
 > cat > local-time <<EOCAML
 #!/usr/bin/env b0caml
 #directory "+ptime"
-#directory "+ptime/os"
+#directory "+ptime/clock/os"
 
 let to_string () =
   let now = Ptime_clock.now () in
