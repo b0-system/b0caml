@@ -55,7 +55,7 @@ directory.
 
 The following script uses the [Ptime] and [Ptime_clock] modules. These
 modules are installed by the [ptime] package in the [ptime] and
-[ptime/os] of a directory assumed to be in the [OCAMLPATH]:
+[ptime/clock/os] of a directory assumed to be in the [OCAMLPATH]:
 
 {[
 > cat > local-time <<EOCAML
