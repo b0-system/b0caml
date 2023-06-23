@@ -9,17 +9,17 @@ open B0_std
 
 let uninstalled ?search ?switch () =
   let switch = match switch with
-  | None -> Cmd.empty | Some s -> Cmd.(atom "--switch" % s)
+  | None -> Cmd.empty | Some s -> Cmd.(arg "--switch" % s)
   in
-  let opam_list = Cmd.(atom "opam" % "list" %% switch % "--short") in
+  let opam_list = Cmd.(arg "opam" % "list" %% switch % "--short") in
   Result.bind (Os.Cmd.find ?search opam_list) @@ function
   | None -> Ok String.Set.empty
   | Some opam_list ->
       let list kind = Os.Cmd.run_out ~trim:true Cmd.(opam_list % kind) in
       Result.bind (list "--available") @@ fun available ->
       Result.bind (list "--installed") @@ fun installed ->
-      let available = B00_lines.of_string (String.trim available) in
-      let installed = B00_lines.of_string (String.trim installed) in
+      let available = B0_text_lines.of_string (String.trim available) in
+      let installed = B0_text_lines.of_string (String.trim installed) in
       Ok (String.Set.(diff (of_list available) (of_list installed)))
 
 (* Suggesting packages *)

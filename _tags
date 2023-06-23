@@ -1,6 +1,7 @@
 true : bin_annot, safe_string
 <src> : include
-<src/**> : package(b0.std), package(b0.b00), package(b0.b00.kit)
+<src/**> : package(b0.std), package(b0), package(b0.file), \
+           package(b0.kit)
 <test> : include
 <examples> : -traverse
 <_b0> : -traverse

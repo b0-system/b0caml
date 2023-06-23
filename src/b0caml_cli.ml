@@ -12,14 +12,14 @@ let delete_script_cache c script =
   | false -> Ok ()
   | true ->
       let log = B0caml.script_build_log ~build_dir in
-      Result.bind (B00_cli.Memo.Log.read log) @@ fun log ->
+      Result.bind (B0_cli.Memo.Log.read log) @@ fun log ->
       Result.bind (Os.Path.delete ~recurse:true build_dir) @@ fun _ ->
-      let add_key acc o = match B000.Op.hash o with
+      let add_key acc o = match B0_zero.Op.hash o with
       | k when Hash.is_nil k -> acc | k -> Hash.to_hex k :: acc
       in
-      let keys = List.fold_left add_key [] (B00_cli.Memo.Log.ops log) in
+      let keys = List.fold_left add_key [] (B0_cli.Memo.Log.ops log) in
       let dir = B0caml.Conf.b0_cache_dir c in
-      Result.bind (B00_cli.File_cache.delete ~dir (`Keys keys)) @@
+      Result.bind (B0_cli.File_cache.delete ~dir (`Keys keys)) @@
       fun _ -> Ok ()
 
 let show_script_path c script =
@@ -72,7 +72,7 @@ let cache_cmd c action scripts =
   | `Stats ->
       let dir = B0caml.Conf.b0_cache_dir c in
       let used = String.Set.empty in (* TODO *)
-      Result.bind (B00_cli.File_cache.stats ~dir ~used) @@
+      Result.bind (B0_cli.File_cache.stats ~dir ~used) @@
       fun _ -> Ok B0caml.Exit.ok
   | `Trim ->
       Log.app (fun m -> m "the trim subcommand is TODO");
@@ -142,14 +142,14 @@ let log_cmd c script_file no_pager format details op_selector =
   Log.if_error ~use:B0caml.Exit.conf_error @@
   Result.bind c @@ fun c ->
   let don't = no_pager || format = `Trace_event in
-  Result.bind (B00_pager.find ~don't ()) @@ fun pager ->
-  Result.bind (B00_pager.page_stdout pager) @@ fun () ->
+  Result.bind (B0_pager.find ~don't ()) @@ fun pager ->
+  Result.bind (B0_pager.page_stdout pager) @@ fun () ->
   Result.bind (B0caml.get_script_file c script_file) @@ fun script_file ->
   let build_dir = B0caml.script_build_dir c ~script_file in
   let log = B0caml.script_build_log ~build_dir in
   Log.if_error' ~use:B0caml.Exit.miss_log_error @@
-  Result.bind (B00_cli.Memo.Log.read log) @@ fun l ->
-  B00_cli.Memo.Log.out Fmt.stdout format details op_selector ~path:log l;
+  Result.bind (B0_cli.Memo.Log.read log) @@ fun l ->
+  B0_cli.Memo.Log.out Fmt.stdout format details op_selector ~path:log l;
   Ok B0caml.Exit.ok
 
 (* Command line interface *)
@@ -185,16 +185,16 @@ let conf () =
     let env = Cmd.Env.info B0caml.Env.cache_dir in
     let doc = "Cache directory." and docv = "PATH" in
     let none = "$(b,XDG_CACHE_HOME)/b0caml" in
-    Arg.(value & opt (Arg.some ~none B00_cli.fpath) None &
+    Arg.(value & opt (Arg.some ~none B0_cli.fpath) None &
          info ["cache-dir"] ~doc ~docv ~docs ~env)
   in
   let tty_cap =
     let env = Cmd.Env.info B0caml.Env.color in
-    B00_cli.B0_std.tty_cap ~docs ~env ()
+    B0_cli.B0_std.tty_cap ~docs ~env ()
   in
   let log_level =
     let env = Cmd.Env.info B0caml.Env.verbosity in
-    B00_cli.B0_std.log_level ~docs ~env ()
+    B0_cli.B0_std.log_level ~docs ~env ()
   in
   let conf cache_dir tty_cap log_level comp_target =
     B0caml.Conf.setup_with_cli ~cache_dir ~comp_target ~tty_cap ~log_level ()
@@ -348,11 +348,11 @@ let cmd () =
     let docs_format = "OUTPUT FORMAT" in
     let docs_details = "OUTPUT DETAILS" in
     let docs_select = "OPTIONS FOR SELECTING OPERATIONS" in
-    let envs = B00_pager.envs () in
+    let envs = B0_pager.Env.infos in
     let man = [
       `S Manpage.s_description;
       `P "The $(tname) command shows build log of a script.";
-      `Blocks B00_cli.Op.query_man;
+      `Blocks B0_cli.Op.query_man;
       `S docs_format;
       `S docs_details;
       `S docs_select; ]
@@ -361,10 +361,10 @@ let cmd () =
       exit_info B0caml.Exit.miss_dep_error "on missing log." :: exits
     in
     Cmd.v (Cmd.info "log" ~doc ~sdocs ~exits ~envs ~man ~man_xrefs)
-      Term.(const log_cmd $ conf $ script_file $ B00_pager.don't () $
-            B00_cli.Memo.Log.out_format_cli ~docs:docs_details () $
-            B00_cli.Arg.output_format ~docs:docs_format () $
-            B00_cli.Op.query_cli ~docs:docs_select ())
+      Term.(const log_cmd $ conf $ script_file $ B0_pager.don't () $
+            B0_cli.Memo.Log.out_format_cli ~docs:docs_details () $
+            B0_cli.output_format ~docs:docs_format () $
+            B0_cli.Op.query_cli ~docs:docs_select ())
   in
   let main_cmd =
     let doc = "Easy OCaml scripts" in

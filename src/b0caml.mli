@@ -98,7 +98,7 @@ module Conf : sig
   val ocamlpath : t -> B0caml_ocamlpath.t
   (** [ocamlpath] is the [OCAMLPATH] to consider. *)
 
-  val memo : t -> (B00.Memo.t, string) result
+  val memo : t -> (B0_memo.t, string) result
   (** [memo c] is the memoizer for the configuration. *)
 
   val tty_cap : t -> Tty.cap

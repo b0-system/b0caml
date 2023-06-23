@@ -45,14 +45,14 @@ module Conf = struct
 
   let get_memo ~cwd ~cache_dir =
     let feedback =
-      let op_howto ppf o = Fmt.pf ppf "b0caml log --id %d" (B000.Op.id o) in
+      let op_howto ppf o = Fmt.pf ppf "b0caml log --id %d" (B0_zero.Op.id o) in
       let show_op = Log.Info and show_ui = Log.Error and level = Log.level () in
-      B00_cli.Memo.pp_leveled_feedback ~op_howto ~show_op ~show_ui ~level
+      B0_cli.Memo.pp_leveled_feedback ~op_howto ~show_op ~show_ui ~level
         Fmt.stderr
     in
-    let trash_dir = Fpath.(cache_dir / B00_cli.Memo.trash_dir_name) in
+    let trash_dir = Fpath.(cache_dir / B0_cli.Memo.trash_dir_name) in
     let jobs = 4 in
-    B00.Memo.memo ~cwd ~cache_dir ~trash_dir ~jobs ~feedback ()
+    B0_memo.make ~cwd ~cache_dir ~trash_dir ~jobs ~feedback ()
 
   type t =
     { cache_dir : Fpath.t;
@@ -60,12 +60,12 @@ module Conf = struct
       comp_target : comp_target;
       cwd : Fpath.t;
       log_level : Log.level;
-      memo : (B00.Memo.t, string) result Lazy.t;
+      memo : (B0_memo.t, string) result Lazy.t;
       ocamlpath : B0caml_ocamlpath.t;
       tty_cap : Tty.cap; }
 
   let v ~cache_dir ~comp_target ~cwd ~log_level ~ocamlpath ~tty_cap () =
-    let b0_cache_dir = Fpath.(cache_dir / B00_cli.Memo.cache_dir_name) in
+    let b0_cache_dir = Fpath.(cache_dir / B0_cli.Memo.cache_dir_name) in
     let memo = lazy (get_memo ~cwd ~cache_dir:b0_cache_dir) in
     { cache_dir; b0_cache_dir; comp_target; cwd; log_level; memo; ocamlpath;
       tty_cap }
@@ -83,9 +83,9 @@ module Conf = struct
     Os.Env.find' ~empty_is_none:true parse var |> Log.if_error ~use:None
 
   let setup ~cache_dir ~comp_target ~log_level ~tty_cap () =
-    let tty_cap = B00_cli.B0_std.get_tty_cap tty_cap in
-    let log_level = B00_cli.B0_std.get_log_level log_level in
-    B00_cli.B0_std.setup tty_cap log_level ~log_spawns:Log.Debug;
+    let tty_cap = B0_cli.B0_std.get_tty_cap tty_cap in
+    let log_level = B0_cli.B0_std.get_log_level log_level in
+    B0_cli.B0_std.setup tty_cap log_level ~log_spawns:Log.Debug;
     Result.bind (Os.Dir.cwd ()) @@ fun cwd ->
     Result.bind (get_cache_dir ~cwd cache_dir) @@ fun cache_dir ->
     let comp_target = get_comp_target comp_target in
@@ -96,7 +96,7 @@ module Conf = struct
   let setup_without_cli () =
     let cache_dir = env_find Fpath.of_string Env.cache_dir in
     let comp_target = env_find comp_target_of_string Env.comp_target in
-    let tty_cap = env_find B00_cli.B0_std.tty_cap_of_string Env.color in
+    let tty_cap = env_find B0_cli.B0_std.tty_cap_of_string Env.color in
     let log_level = env_find Log.level_of_string Env.verbosity in
     setup ~cache_dir ~comp_target ~tty_cap ~log_level ()
 end
@@ -181,8 +181,8 @@ let write_source m build_dir s ~mod_uses ~src_file =
   let mod_use_files = B0caml_script.mod_use_resolution_files in
   let mod_uses_files = List.concat_map mod_use_files mod_uses in
   let reads = B0caml_script.file s :: mod_uses_files in
-  List.iter (B00.Memo.file_ready m) reads;
-  B00.Memo.write m ~reads src_file @@ fun () ->
+  List.iter (B0_memo.file_ready m) reads;
+  B0_memo.write m ~reads src_file @@ fun () ->
   B0caml_script.src ~mod_use_resolutions:mod_uses s
 
 (* There are various way one could go about this.
@@ -195,14 +195,14 @@ let write_source m build_dir s ~mod_uses ~src_file =
       present in the -I dirs and find their rec. deps. Only depend
       on these files. *)
 
-let byte_comp m = B00.Memo.tool m B00_ocaml.Tool.ocamlc, `Byte
-let native_comp m = B00.Memo.tool m B00_ocaml.Tool.ocamlopt, `Native
+let byte_comp m = B0_memo.tool m B0_ocaml.Tool.ocamlc, `Byte
+let native_comp m = B0_memo.tool m B0_ocaml.Tool.ocamlopt, `Native
 
 let find_comp c m = match Conf.comp_target c with
 | `Byte -> Fut.return (byte_comp m)
 | `Native -> Fut.return (native_comp m)
 | `Auto ->
-    let* ocamlopt = B00.Memo.tool_opt m B00_ocaml.Tool.ocamlopt in
+    let* ocamlopt = B0_memo.tool_opt m B0_ocaml.Tool.ocamlopt in
     Fut.return @@ match ocamlopt with
     | None -> byte_comp m
     | Some comp -> comp, `Native
@@ -213,7 +213,7 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   (* Automatically add ocaml libs *)
   let dirs = B0caml_ocamlpath.ocaml_logical_dir ocamlpath :: dirs in
   let* archives = B0caml_resolver.find_archives_and_deps r ~code ~dirs in
-  let archives = List.map B00_ocaml.Cobj.file archives in
+  let archives = List.map B0_ocaml.Cobj.file archives in
   let incs = Cmd.unstamp @@ Cmd.paths ~slip:"-I" dirs in
   let base = Fpath.strip_ext src_file in
   let writes = match code with
@@ -223,10 +223,10 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let exe = Fpath.(build_dir / "exe" ) in
   let writes = exe :: Fpath.(base + ".cmi") :: writes in
   let reads = src_file :: archives (* FIXME add C libs. *) in
-  List.iter (B00.Memo.file_ready m) archives;
-  B00.Memo.spawn m ~reads ~writes @@
-  comp Cmd.(atom "-o" %% unstamp (path exe) %% atom "-nostdlib" %%
-            atom "-opaque" %%
+  List.iter (B0_memo.file_ready m) archives;
+  B0_memo.spawn m ~reads ~writes @@
+  comp Cmd.(arg "-o" %% unstamp (path exe) %% arg "-nostdlib" %%
+            arg "-opaque" %%
             (unstamp @@ (incs %% paths archives %% path src_file)));
   Fut.return ()
 
@@ -234,16 +234,16 @@ let maybe_write_build_log m ~build_dir =
   (* Only write log if there's a failure or something was spawned *)
   (*
   let spawn_execs m =
-    let spawn_exec o = match B000.Op.kind o with
-    | B000.Op.Spawn _ when not (B000.Op.revived o) -> true | _ -> false
+    let spawn_exec o = match B0_zero.Op.kind o with
+    | B0_zero.Op.Spawn _ when not (B0_zero.Op.revived o) -> true | _ -> false
     in
-    List.exists spawn_exec (B00.Memo.ops m)
+    List.exists spawn_exec (B0_memo.ops m)
   in
-  if not (B00.Memo.has_failures m) && not (spawn_execs m) then () else
+  if not (B0_memo.has_failures m) && not (spawn_execs m) then () else
 *)
   (* For now always write log. Let's see how much it gets on the budget. *)
   let log_file = script_build_log ~build_dir in
-  Log.if_error ~use:() (B00_cli.Memo.Log.(write log_file (of_memo m)))
+  Log.if_error ~use:() (B0_cli.Memo.Log.(write log_file (of_memo m)))
 
 let compile_script c s =
   let ocamlpath = Conf.ocamlpath c in
@@ -262,13 +262,13 @@ let compile_script c s =
         let* comp = find_comp c m in
         (* FIXME gets also rid of log, but is needed
            for src updates. Needs to fix b0
-           B00.Memo.delete m build_dir @@ fun () -> *)
-        let* () = B00.Memo.mkdir m build_dir in
+           B0_memo.delete m build_dir @@ fun () -> *)
+        let* () = B0_memo.mkdir m build_dir in
         write_source m build_dir s ~mod_uses ~src_file;
         compile_source m comp r build_dir s ~dirs ~src_file
       end;
-      B00.Memo.stir m ~block:true;
-      let ret = match B00.Memo.status m with
+      B0_memo.stir m ~block:true;
+      let ret = match B0_memo.status m with
       | Ok () -> Ok exe
       | Error e ->
           let s = B0caml_script.file s in
@@ -279,7 +279,7 @@ let compile_script c s =
             Fmt.pf ppf "b0caml log %a -w " Fpath.pp_quoted s
           in
           Fmt.error "%a"
-            (B000_conv.Op.pp_aggregate_error ~read_howto ~write_howto ()) e
+            (B0_zero_conv.Op.pp_aggregate_error ~read_howto ~write_howto ()) e
       in
       maybe_write_build_log m ~build_dir;
       ret

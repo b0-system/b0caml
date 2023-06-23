@@ -56,8 +56,8 @@ let get ?search = function
               Result.bind (Os.Cmd.run_out ~trim:true cmd) @@ fun s ->
               Result.map Option.some (Fpath.of_string s)
         in
-        let opam_lib = fpath_of_cmd Cmd.(atom "opam" % "var" % "lib") in
-        let ocaml_where = fpath_of_cmd Cmd.(atom "ocamlc" % "-where") in
+        let opam_lib = fpath_of_cmd Cmd.(arg "opam" % "var" % "lib") in
+        let ocaml_where = fpath_of_cmd Cmd.(arg "ocamlc" % "-where") in
         Result.bind opam_lib @@ fun opam_lib ->
         Result.bind ocaml_where @@ fun ocaml_where ->
         match opam_lib, ocaml_where with
@@ -79,7 +79,7 @@ let ocaml_logical_dir p = p.ocaml_logical_dir
 let logical_dirs p =
   let add_dir acc dir =
     let add_path _ _ p ds = Fpath.Set.add Fpath.(v ("+" ^ to_string p)) ds in
-    Result.to_failure @@
+    Result.error_to_failure @@
     Os.Dir.fold_dirs ~rel:true ~recurse:true add_path dir acc
   in
   try Ok (List.fold_left add_dir Fpath.Set.empty p.dirs) with
