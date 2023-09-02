@@ -31,7 +31,7 @@ type t
     but for legacy reasons we need to carry a bit more information. *)
 
 val get :
-  ?search:Fpath.t list -> Fpath.t list option -> (t, string) result
+  ?search:Cmd.tool_search -> Fpath.t list option -> (t, string) result
 (** [get ocamlpath] is [Ok ps] if [ocamlpath] is [Some ps] and otherwise:
     {ul
     {- If the [OCAMLPATH] environment variable is defined, its contents

@@ -4,7 +4,7 @@
   ---------------------------------------------------------------------------*)
 
 open B0_std
-open B0_std.Fut.Syntax
+open Fut.Syntax
 
 module Exit = struct
   type t = Code of int | Exec of Fpath.t * Cmd.t
@@ -181,7 +181,7 @@ let write_source m build_dir s ~mod_uses ~src_file =
   let mod_use_files = B0caml_script.mod_use_resolution_files in
   let mod_uses_files = List.concat_map mod_use_files mod_uses in
   let reads = B0caml_script.file s :: mod_uses_files in
-  List.iter (B0_memo.file_ready m) reads;
+  B0_memo.ready_files m reads;
   B0_memo.write m ~reads src_file @@ fun () ->
   B0caml_script.src ~mod_use_resolutions:mod_uses s
 
@@ -223,7 +223,7 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let exe = Fpath.(build_dir / "exe" ) in
   let writes = exe :: Fpath.(base + ".cmi") :: writes in
   let reads = src_file :: archives (* FIXME add C libs. *) in
-  List.iter (B0_memo.file_ready m) archives;
+  B0_memo.ready_files m archives;
   B0_memo.spawn m ~reads ~writes @@
   comp Cmd.(arg "-o" %% unstamp (path exe) %% arg "-nostdlib" %%
             arg "-opaque" %%

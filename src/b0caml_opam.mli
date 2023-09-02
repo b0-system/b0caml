@@ -10,7 +10,7 @@ open B0_std
 (** {1:pkg_list Listing packages} *)
 
 val uninstalled :
-  ?search:Fpath.t list -> ?switch:string -> unit ->
+  ?search:Cmd.tool_search -> ?switch:string -> unit ->
   (String.Set.t, string) result
 (** [uninstalled ?search ~switch ()] is the set of uninstalled
     packages in the opam switch [switch]. [search] is given to

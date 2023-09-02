@@ -20,23 +20,23 @@ let b0caml_lib =
 let b0caml =
   let requires = [cmdliner; b0_std; b0_memo; b0_file; b0_kit; b0caml] in
   let srcs = Fpath.[`File (v "src/b0caml_main.ml")] in
-  B0_ocaml.exe "b0caml" ~doc:"b0caml tool" ~requires ~srcs
+  B0_ocaml.exe "b0caml" ~public:true ~doc:"b0caml tool" ~requires ~srcs
 
 (* Packs *)
 
 let default =
-  let units = B0_unit.list () in
   let meta =
-    let open B0_meta in
-    empty
-    |> add authors ["The b0caml programmers"]
-    |> add maintainers ["Daniel Bünzli <daniel.buenzl i@erratique.ch>"]
-    |> add homepage "https://erratique.ch/software/b0caml"
-    |> add online_doc "https://erratique.ch/software/b0caml/doc"
-    |> add description_tags
+    B0_meta.empty
+    |> B0_meta.(add authors) ["The b0caml programmers"]
+    |> B0_meta.(add maintainers)
+       ["Daniel Bünzli <daniel.buenzl i@erratique.ch>"]
+    |> B0_meta.(add homepage) "https://erratique.ch/software/b0caml"
+    |> B0_meta.(add online_doc) "https://erratique.ch/software/b0caml/doc"
+    |> B0_meta.(add description_tags)
       ["org:erratique"; "org:b0-system"; "build"; "dev"; "scripting"]
-    |> add licenses ["ISC"; "PT-Sans-fonts"; "DejaVu-fonts"]
-    |> add repo "git+https://erratique.ch/repos/b0caml.git"
-    |> add issues "https://github.com/b0-system/b0caml/issues"
+    |> B0_meta.(add licenses) ["ISC"; "PT-Sans-fonts"; "DejaVu-fonts"]
+    |> B0_meta.(add repo) "git+https://erratique.ch/repos/b0caml.git"
+    |> B0_meta.(add issues) "https://github.com/b0-system/b0caml/issues"
   in
-  B0_pack.v "default" ~doc:"The b0caml project" ~meta ~locked:true units
+  B0_pack.make "default" ~doc:"The b0caml project" ~meta ~locked:true @@
+  B0_unit.list ()

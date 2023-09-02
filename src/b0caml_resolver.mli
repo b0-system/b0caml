@@ -15,8 +15,8 @@ val create :
 
 val ocamlpath : t ->  B0caml_ocamlpath.t
 val find_archives_and_deps :
-  ?deps:(B0_ocaml.Cobj.t -> B0_ocaml.Mod.Ref.Set.t) -> t ->
-  code:B0_ocaml.Conf.code -> dirs:B0_std.Fpath.t list ->
+  ?deps:(B0_ocaml.Cobj.t -> B0_ocaml.Modref.Set.t) -> t ->
+  code:B0_ocaml.Code.t -> dirs:B0_std.Fpath.t list ->
   B0_ocaml.Cobj.t list Fut.t
 
 (*---------------------------------------------------------------------------

@@ -38,7 +38,7 @@ let find dirs name =
 let of_paths ps = match find ps "ocaml" with
 | Some ocaml -> Ok { dirs = ps; ocaml_logical_dir = ocaml }
 | None ->
-    let pp = Fmt.tty_string [`Bold] in
+    let pp = Fmt.tty' [`Bold] in
     Fmt.error "Could not find %a in %a" pp "+ocaml" pp "OCAMLPATH"
 
 let get ?search = function
@@ -49,12 +49,11 @@ let get ?search = function
     match Log.if_error ~use:None path with
     | Some ps -> of_paths ps
     | None ->
-        let fpath_of_cmd cmd =
-          Result.bind (Os.Cmd.find ?search cmd) @@ function
-          | None -> Ok None
-          | Some cmd ->
-              Result.bind (Os.Cmd.run_out ~trim:true cmd) @@ fun s ->
-              Result.map Option.some (Fpath.of_string s)
+        let fpath_of_cmd cmd = match Os.Cmd.find ?search cmd with
+        | None -> Ok None
+        | Some cmd ->
+            Result.bind (Os.Cmd.run_out ~trim:true cmd) @@ fun s ->
+            Result.map Option.some (Fpath.of_string s)
         in
         let opam_lib = fpath_of_cmd Cmd.(arg "opam" % "var" % "lib") in
         let ocaml_where = fpath_of_cmd Cmd.(arg "ocamlc" % "-where") in
@@ -65,7 +64,7 @@ let get ?search = function
         | Some p, None ->
             Ok { dirs = [p]; ocaml_logical_dir = Fpath.(p / "ocaml") }
         | None, None ->
-            let pp = Fmt.tty_string [`Bold] in
+            let pp = Fmt.tty' [`Bold] in
             Fmt.error "@[<v>Could not detect an OCaml install.@,\
                             Try setting the %a variable.@]" pp "OCAMLPATH"
         | Some opam, Some ocaml when Fpath.is_prefix opam ocaml ->

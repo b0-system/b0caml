@@ -10,7 +10,9 @@ let exit_main = function
 | B0caml.Exit.Code c -> exit c
 | B0caml.Exit.Exec (exe, cmd) ->
     exit @@ Log.if_error ~use:B0caml.Exit.(code some_error) @@
-    Result.bind (Os.Cmd.execv exe cmd) @@ fun _ -> assert false
+    let argv0 = Fpath.to_string (Cmd.find_tool cmd |> Option.get) in
+    let cmd = Cmd.set_tool exe cmd in
+    Result.bind (Os.Cmd.execv ~argv0 cmd) @@ fun _ -> assert false
 
 let main_without_cli script_file script_args =
   let res =

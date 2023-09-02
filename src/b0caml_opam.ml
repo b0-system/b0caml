@@ -7,20 +7,24 @@ open B0_std
 
 (* Listing packages *)
 
+let pkg_set_of_lines s =
+  let add_pkg _ set pkg = if pkg <> "" then String.Set.add pkg set else set in
+  String.fold_ascii_lines ~strip_newlines:true add_pkg String.Set.empty s
+
 let uninstalled ?search ?switch () =
   let switch = match switch with
   | None -> Cmd.empty | Some s -> Cmd.(arg "--switch" % s)
   in
-  let opam_list = Cmd.(arg "opam" % "list" %% switch % "--short") in
-  Result.bind (Os.Cmd.find ?search opam_list) @@ function
+  let opam_list = Cmd.(tool "opam" % "list" %% switch % "--short") in
+  match Os.Cmd.find ?search opam_list with
   | None -> Ok String.Set.empty
   | Some opam_list ->
       let list kind = Os.Cmd.run_out ~trim:true Cmd.(opam_list % kind) in
       Result.bind (list "--available") @@ fun available ->
       Result.bind (list "--installed") @@ fun installed ->
-      let available = B0_text_lines.of_string (String.trim available) in
-      let installed = B0_text_lines.of_string (String.trim installed) in
-      Ok (String.Set.(diff (of_list available) (of_list installed)))
+      let available = pkg_set_of_lines available in
+      let installed = pkg_set_of_lines installed in
+      Ok (String.Set.diff available installed)
 
 (* Suggesting packages *)
 
@@ -30,7 +34,7 @@ let pkg_suggestions ~pkgs ~pkg =
   | [] -> None | ss -> Some (`Fuzzy ss)
 
 let pp_maybe_try_install ~alt ppf opam =
-  let pp_cmd ppf l = Fmt.tty_string [`Bold] ppf (String.concat " " l) in
+  let pp_cmd ppf l = Fmt.tty' [`Bold] ppf (String.concat " " l) in
   let maybe = if alt then "Or maybe try" else "Maybe try" in
   let pp_install ppf pkgs = pp_cmd ppf ("opam" :: "install" :: pkgs) in
   match opam with

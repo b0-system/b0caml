@@ -18,7 +18,7 @@ let loc m = m
 
 let loc_err_fmt ffmt m fmt =
   ffmt ("@[<v>%a:@,@[%a: " ^^ fmt ^^ "@]@]")
-    pp_loc (loc m) (Fmt.tty_string [`Fg `Red; `Bold ]) "Error"
+    pp_loc (loc m) (Fmt.tty' [`Fg `Red; `Bold ]) "Error"
 
 let loc_errf m fmt = loc_err_fmt Fmt.str m fmt
 let loc_error m fmt = loc_err_fmt Fmt.error m fmt
@@ -271,7 +271,7 @@ let src ~mod_use_resolutions s =
   let add_mod_name n acc = n :: "module " :: acc in
   let add_dep_src acc (intf_file, impl_file, meta) =
     let name = Fpath.basename impl_file in
-    let name = B0_ocaml.Mod.Name.of_mangled_filename name in
+    let name = B0_ocaml.Modname.mangle_filename name in
     let impl = read impl_file meta in
     match intf_file with
     | None -> add_mod_impl impl_file impl @@ add_mod_name name acc

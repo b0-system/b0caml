@@ -23,13 +23,13 @@ type t =
     mutable dir_dirs : Fpath.Set.t Fpath.Map.t;
     mutable dir_cobjs :
       B0_ocaml.Cobj.t list Fut.t Fpath.Map.t; (* Mapped by dir. *)
-    mutable mod_ref_cobj : B0_ocaml.Cobj.t list B0_ocaml.Mod.Ref.Map.t; }
+    mutable mod_ref_cobj : B0_ocaml.Cobj.t list B0_ocaml.Modref.Map.t; }
 
 let create m ~memo_dir ~ocamlpath =
   { m; memo_dir; ocamlpath;
     ocamlpath_root_dirs = ocamlpath_root_dirs ~ocamlpath;
     dir_dirs = Fpath.Map.empty;
-    dir_cobjs = Fpath.Map.empty; mod_ref_cobj = B0_ocaml.Mod.Ref.Map.empty }
+    dir_cobjs = Fpath.Map.empty; mod_ref_cobj = B0_ocaml.Modref.Map.empty }
 
 let ocamlpath r = r.ocamlpath
 
@@ -46,28 +46,30 @@ let index_dir ~ext r dir =
 let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
 | info -> info
 | exception Not_found ->
-    let info, set_info = Fut.create () in
+    let info, set_info = Fut.make () in
     r.dir_cobjs <- Fpath.Map.add dir info r.dir_cobjs;
     begin
       let cobjs = index_dir ~ext r dir in
       let o =
         let base = Fpath.basename dir in
-        let uniq = Hash.to_hex (B0_memo.hash_string r.m (Fpath.to_string dir)) in
+        let uniq =
+          Hash.to_hex (B0_memo.hash_string r.m (Fpath.to_string dir))
+        in
         Fpath.(r.memo_dir / Fmt.str "%s-%s%s.info" base uniq ext)
       in
-      List.iter (B0_memo.file_ready r.m) cobjs;
+      B0_memo.ready_files r.m cobjs;
       if ext = ".cmxa" then begin
-        List.iter (fun o -> B0_memo.file_ready r.m (Fpath.set_ext ".a" o)) cobjs
+        List.iter (fun o -> B0_memo.ready_file r.m (Fpath.set_ext ".a" o)) cobjs
       end;
       B0_ocaml.Cobj.write r.m ~cobjs ~o;
       ignore @@
       let* cobjs = B0_ocaml.Cobj.read r.m o in
       let add_mod_ref cobj def =
         r.mod_ref_cobj <-
-          B0_ocaml.Mod.Ref.Map.add_to_list def cobj r.mod_ref_cobj
+          B0_ocaml.Modref.Map.add_to_list def cobj r.mod_ref_cobj
       in
       let add_mod_refs cobj =
-        B0_ocaml.Mod.Ref.Set.iter (add_mod_ref cobj) (B0_ocaml.Cobj.defs cobj)
+        B0_ocaml.Modref.Set.iter (add_mod_ref cobj) (B0_ocaml.Cobj.defs cobj)
       in
       List.iter add_mod_refs cobjs;
       set_info cobjs;
@@ -76,7 +78,7 @@ let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
     info
 
 let try_find_mod_ref_root_dir r ref =
-  let name = String.Ascii.lowercase (B0_ocaml.Mod.Ref.name ref) in
+  let name = String.Ascii.lowercase (B0_ocaml.Modref.name ref) in
   match String.Map.find name r.ocamlpath_root_dirs with
   | p -> Some p
   | exception Not_found ->
@@ -95,11 +97,11 @@ let amb r ~ext ref cobjs =
   | cobjs ->
       (* FIXME constraints. *)
       B0_memo.notify r.m `Info "@[<v>ambiguous resolution for %a:@,%a@]"
-        B0_ocaml.Mod.Ref.pp ref (Fmt.list B0_ocaml.Cobj.pp) cobjs;
+        B0_ocaml.Modref.pp ref (Fmt.list B0_ocaml.Cobj.pp) cobjs;
       Fut.return None
 
 let find_archive_for_mod_ref r ~ext ref =
-  match B0_ocaml.Mod.Ref.Map.find ref r.mod_ref_cobj with
+  match B0_ocaml.Modref.Map.find ref r.mod_ref_cobj with
   | [cobj] -> Fut.return (Some cobj)
   | cobjs -> amb r ~ext ref cobjs
   | exception Not_found ->
@@ -108,35 +110,35 @@ let find_archive_for_mod_ref r ~ext ref =
       | Some roots ->
           let root = List.hd roots (* FIXME *) in
           let* _ = get_cobjs_info r ~ext root in
-          match B0_ocaml.Mod.Ref.Map.find ref r.mod_ref_cobj with
+          match B0_ocaml.Modref.Map.find ref r.mod_ref_cobj with
           | [cobj] -> Fut.return (Some cobj)
           | cobjs -> amb r ~ext ref cobjs
           | exception Not_found ->
               Fut.return None (* TODO subdirs and eventually whole scan *)
 
 let rec find_mod_refs r ~deps ~ext cobjs defined todo =
-  match B0_ocaml.Mod.Ref.Set.choose todo with
+  match B0_ocaml.Modref.Set.choose todo with
   | exception Not_found ->
       let cobjs = B0_ocaml.Cobj.Set.elements cobjs in
       let cobjs, _ = B0_ocaml.Cobj.sort ~deps cobjs in
       Fut.return cobjs
   | ref ->
-      let todo = B0_ocaml.Mod.Ref.Set.remove ref todo in
-      match B0_ocaml.Mod.Ref.Set.mem ref defined with
+      let todo = B0_ocaml.Modref.Set.remove ref todo in
+      match B0_ocaml.Modref.Set.mem ref defined with
       | true -> find_mod_refs r ~deps ~ext cobjs defined todo
       | false ->
           Fut.bind (find_archive_for_mod_ref r ~ext ref) @@ function
           | None ->
               B0_memo.notify r.m `Info
-                "No resolution for %a" B0_ocaml.Mod.Ref.pp ref;
+                "No resolution for %a" B0_ocaml.Modref.pp ref;
               find_mod_refs r ~deps ~ext cobjs defined todo
           | Some cobj ->
               let cobjs = B0_ocaml.Cobj.Set.add cobj cobjs in
               let defined =
-                B0_ocaml.Mod.Ref.Set.union (B0_ocaml.Cobj.defs cobj) defined
+                B0_ocaml.Modref.Set.union (B0_ocaml.Cobj.defs cobj) defined
               in
-              let new_refs = B0_ocaml.Mod.Ref.Set.diff (deps cobj) defined in
-              let todo = B0_ocaml.Mod.Ref.Set.union todo new_refs in
+              let new_refs = B0_ocaml.Modref.Set.diff (deps cobj) defined in
+              let todo = B0_ocaml.Modref.Set.union todo new_refs in
               find_mod_refs r ~deps ~ext cobjs defined todo
 
 let find_archives_and_deps ?(deps = B0_ocaml.Cobj.link_deps) r ~code ~dirs =
@@ -145,13 +147,13 @@ let find_archives_and_deps ?(deps = B0_ocaml.Cobj.link_deps) r ~code ~dirs =
   let roots = List.concat roots in
   let defined, to_find =
     let rec loop defs ldeps = function
-    | [] -> defs, B0_ocaml.Mod.Ref.Set.diff ldeps defs
+    | [] -> defs, B0_ocaml.Modref.Set.diff ldeps defs
     | cobj :: cobjs ->
-      let defs = B0_ocaml.Mod.Ref.Set.union (B0_ocaml.Cobj.defs cobj) defs in
-      let ldeps = B0_ocaml.Mod.Ref.Set.union (deps cobj) ldeps in
+      let defs = B0_ocaml.Modref.Set.union (B0_ocaml.Cobj.defs cobj) defs in
+      let ldeps = B0_ocaml.Modref.Set.union (deps cobj) ldeps in
       loop defs ldeps cobjs
     in
-    loop B0_ocaml.Mod.Ref.Set.empty B0_ocaml.Mod.Ref.Set.empty roots
+    loop B0_ocaml.Modref.Set.empty B0_ocaml.Modref.Set.empty roots
   in
   find_mod_refs r ~deps ~ext (B0_ocaml.Cobj.Set.of_list roots) defined to_find
 
