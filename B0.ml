@@ -2,6 +2,7 @@ open B0_kit.V000
 
 (* OCaml library names *)
 
+let unix = B0_ocaml.libname "unix"
 let cmdliner = B0_ocaml.libname "cmdliner"
 let b0_std = B0_ocaml.libname "b0.std"
 let b0_memo = B0_ocaml.libname "b0.memo"
@@ -12,7 +13,7 @@ let b0caml = B0_ocaml.libname "b0caml"
 (* Units *)
 
 let b0caml_lib =
-  let requires = [cmdliner; b0_std; b0_memo; b0_file; b0_kit] in
+  let requires = [unix; cmdliner; b0_std; b0_memo; b0_file; b0_kit] in
   let srcs = Fpath.[`Dir (v "src"); `X (v "src/b0caml_main.ml");] in
   let name = "lib" in
   B0_ocaml.lib b0caml ~name ~doc:"B0caml support library" ~requires ~srcs
