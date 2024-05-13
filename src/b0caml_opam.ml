@@ -34,13 +34,13 @@ let pkg_suggestions ~pkgs ~pkg =
   | [] -> None | ss -> Some (`Fuzzy ss)
 
 let pp_maybe_try_install ~alt ppf opam =
-  let pp_cmd ppf l = Fmt.tty' [`Bold] ppf (String.concat " " l) in
+  let pp_cmd ppf l = Fmt.st [`Bold] ppf (String.concat " " l) in
   let maybe = if alt then "Or maybe try" else "Maybe try" in
   let pp_install ppf pkgs = pp_cmd ppf ("opam" :: "install" :: pkgs) in
   match opam with
   | `Exact pkg -> Fmt.pf ppf "@,@[%s %a@]" maybe pp_install [pkg]
   | `Fuzzy pkgs ->
-    let alts = Fmt.or_enum (Fmt.tty [`Bold] Fmt.string) in
+    let alts = Fmt.or_enum (Fmt.st [`Bold]) in
     Fmt.pf ppf "@,@[%s %a with %a@]" maybe pp_install [] alts pkgs
 
 (*---------------------------------------------------------------------------
