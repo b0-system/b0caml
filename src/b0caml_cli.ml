@@ -38,7 +38,7 @@ let cache_cmd c action scripts =
       begin match scripts with
       | [] ->
           let cache_dir = B0caml.Conf.cache_dir c in
-          let pp_path = Fmt.tty [`Bold] Fpath.pp_unquoted in
+          let pp_path = Fmt.tty' [`Bold] Fpath.pp_unquoted in
           Log.app begin fun m ->
             m "Deleting %a, this may take some time..." pp_path cache_dir
           end;

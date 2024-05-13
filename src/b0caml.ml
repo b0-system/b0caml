@@ -32,7 +32,7 @@ module Conf = struct
   | "byte" -> Ok `Byte
   | "native" -> Ok `Native
   | e ->
-      let pp_target = Fmt.(code string) in
+      let pp_target = Fmt.code in
       let kind = Fmt.any "compilation target" in
       let dom = ["auto"; "byte"; "native"] in
       Fmt.error "%a" Fmt.(unknown' ~kind pp_target ~hint:must_be) (e, dom)
@@ -128,7 +128,7 @@ module Err = struct
     let directory (dir, m, err) = match err with
     | `Error e -> B0caml_script.loc_errf m " %s" e
     | `Miss ->
-        let pp_bold pp = Fmt.tty [`Bold] pp in
+        let pp_bold pp = Fmt.tty' [`Bold] pp in
         match B0caml_ocamlpath.classify_path dir with
         | `Concrete dir ->
             B0caml_script.loc_errf
@@ -147,7 +147,7 @@ module Err = struct
     | `Error e -> B0caml_script.loc_errf m " %s" e
     | `Miss ->
         B0caml_script.loc_errf
-          m " Missing file %a" (Fmt.tty [`Bold] Fpath.pp_unquoted) file
+          m " Missing file %a" (Fmt.tty' [`Bold] Fpath.pp_unquoted) file
     in
     String.concat "\n\n" (List.map mod_use errs)
 end
