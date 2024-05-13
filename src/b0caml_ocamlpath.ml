@@ -38,7 +38,7 @@ let find dirs name =
 let of_paths ps = match find ps "ocaml" with
 | Some ocaml -> Ok { dirs = ps; ocaml_logical_dir = ocaml }
 | None ->
-    let pp = Fmt.tty' [`Bold] in
+    let pp = Fmt.st [`Bold] in
     Fmt.error "Could not find %a in %a" pp "+ocaml" pp "OCAMLPATH"
 
 let get ?search = function
@@ -64,7 +64,7 @@ let get ?search = function
         | Some p, None ->
             Ok { dirs = [p]; ocaml_logical_dir = Fpath.(p / "ocaml") }
         | None, None ->
-            let pp = Fmt.tty' [`Bold] in
+            let pp = Fmt.st [`Bold] in
             Fmt.error "@[<v>Could not detect an OCaml install.@,\
                             Try setting the %a variable.@]" pp "OCAMLPATH"
         | Some opam, Some ocaml when Fpath.is_prefix opam ocaml ->
@@ -100,7 +100,7 @@ let logical_dir_suggestions ~logical_dirs:dirs dir =
   if ds <> [] then some ds else None
 
 let pp_did_you_mean_logical_dirs ppf dirs =
-  Fmt.pf ppf "@,@[%a@]" (Fmt.did_you_mean (Fmt.code Fpath.pp_unquoted)) dirs
+  Fmt.pf ppf "@,@[%a@]" (Fmt.did_you_mean (Fmt.code' Fpath.pp_unquoted)) dirs
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2019 The b0caml programmers

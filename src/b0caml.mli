@@ -74,8 +74,8 @@ module Conf : sig
 
   val v :
     cache_dir:Fpath.t -> comp_target:comp_target -> cwd:Fpath.t ->
-    log_level:Log.level -> ocamlpath:B0caml_ocamlpath.t -> tty_cap:Tty.cap ->
-    unit -> t
+    log_level:Log.level -> ocamlpath:B0caml_ocamlpath.t ->
+    fmt_styler:Fmt.styler -> unit -> t
   (** [v] constructs a configuration with the given attributes.
       See the corresponding accessors for details. *)
 
@@ -101,16 +101,16 @@ module Conf : sig
   val memo : t -> (B0_memo.t, string) result
   (** [memo c] is the memoizer for the configuration. *)
 
-  val tty_cap : t -> Tty.cap
-  (** [tty_cap c] is the terminal capability to assume for output. *)
+  val fmt_styler : t -> Fmt.styler
+  (** [fmt_styler c] is formatting styler assumed for output. *)
 
   (** {1:setup Setup} *)
 
   val setup_with_cli :
     cache_dir:Fpath.t option -> comp_target:comp_target option ->
-    log_level:Log.level option -> tty_cap:Tty.cap option option -> unit ->
+    log_level:Log.level option -> color:Fmt.styler option option -> unit ->
     (t, string) result
-  (** [setup_with_cli ~cache_dir ~comp_target ~tty_cap ~log_level ()]
+  (** [setup_with_cli ~cache_dir ~comp_target ~color ~log_level ()]
       determines and setups a configuration with the given values. These are
       expected to have been determined by environment variables and command
       line arguments. *)

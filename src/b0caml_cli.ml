@@ -12,12 +12,12 @@ let delete_script_cache c script =
   | false -> Ok ()
   | true ->
       let log = B0caml.script_build_log ~build_dir in
-      Result.bind (B0_cli.Memo.Log.read log) @@ fun log ->
+      Result.bind (B0_memo_log.read log) @@ fun log ->
       Result.bind (Os.Path.delete ~recurse:true build_dir) @@ fun _ ->
       let add_key acc o = match B0_zero.Op.hash o with
       | k when Hash.is_nil k -> acc | k -> Hash.to_hex k :: acc
       in
-      let keys = List.fold_left add_key [] (B0_cli.Memo.Log.ops log) in
+      let keys = List.fold_left add_key [] (B0_memo_log.ops log) in
       let dir = B0caml.Conf.b0_cache_dir c in
       Result.bind (B0_cli.File_cache.delete ~dir (`Keys keys)) @@
       fun _ -> Ok ()
@@ -38,7 +38,7 @@ let cache_cmd c action scripts =
       begin match scripts with
       | [] ->
           let cache_dir = B0caml.Conf.cache_dir c in
-          let pp_path = Fmt.tty [`Bold] Fpath.pp_unquoted in
+          let pp_path = Fmt.st' [`Bold] Fpath.pp_unquoted in
           Log.app begin fun m ->
             m "Deleting %a, this may take some time..." pp_path cache_dir
           end;
@@ -148,7 +148,7 @@ let log_cmd c script_file no_pager format details op_selector =
   let build_dir = B0caml.script_build_dir c ~script_file in
   let log = B0caml.script_build_log ~build_dir in
   Log.if_error' ~use:B0caml.Exit.miss_log_error @@
-  Result.bind (B0_cli.Memo.Log.read log) @@ fun l ->
+  Result.bind (B0_memo_log.read log) @@ fun l ->
   B0_cli.Memo.Log.out Fmt.stdout format details op_selector ~path:log l;
   Ok B0caml.Exit.ok
 
@@ -185,21 +185,21 @@ let conf () =
     let env = Cmd.Env.info B0caml.Env.cache_dir in
     let doc = "Cache directory." and docv = "PATH" in
     let none = "$(b,XDG_CACHE_HOME)/b0caml" in
-    Arg.(value & opt (Arg.some ~none B0_cli.fpath) None &
+    Arg.(value & opt (Arg.some ~none B0_std_cli.fpath) None &
          info ["cache-dir"] ~doc ~docv ~docs ~env)
   in
-  let tty_cap =
+  let color =
     let env = Cmd.Env.info B0caml.Env.color in
-    B0_cli.B0_std.tty_cap ~docs ~env ()
+    B0_std_cli.color ~docs ~env ()
   in
   let log_level =
     let env = Cmd.Env.info B0caml.Env.verbosity in
-    B0_cli.B0_std.log_level ~docs ~env ()
+    B0_std_cli.log_level ~docs ~env ()
   in
-  let conf cache_dir tty_cap log_level comp_target =
-    B0caml.Conf.setup_with_cli ~cache_dir ~comp_target ~tty_cap ~log_level ()
+  let conf cache_dir color log_level comp_target =
+    B0caml.Conf.setup_with_cli ~cache_dir ~comp_target ~color ~log_level ()
   in
-  Term.(const conf $ cache_dir $ tty_cap $ log_level $ comp_target)
+  Term.(const conf $ cache_dir $ color $ log_level $ comp_target)
 
 let cmd () =
   let exit_info c doc = match c with
@@ -363,7 +363,7 @@ let cmd () =
     Cmd.v (Cmd.info "log" ~doc ~sdocs ~exits ~envs ~man ~man_xrefs)
       Term.(const log_cmd $ conf $ script_file $ B0_pager.don't () $
             B0_cli.Memo.Log.out_format_cli ~docs:docs_details () $
-            B0_cli.output_format ~docs:docs_format () $
+            B0_std_cli.output_format ~docs:docs_format () $
             B0_cli.Op.query_cli ~docs:docs_select ())
   in
   let main_cmd =

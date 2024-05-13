@@ -32,7 +32,7 @@ module Conf = struct
   | "byte" -> Ok `Byte
   | "native" -> Ok `Native
   | e ->
-      let pp_target = Fmt.(code string) in
+      let pp_target = Fmt.code in
       let kind = Fmt.any "compilation target" in
       let dom = ["auto"; "byte"; "native"] in
       Fmt.error "%a" Fmt.(unknown' ~kind pp_target ~hint:must_be) (e, dom)
@@ -62,13 +62,13 @@ module Conf = struct
       log_level : Log.level;
       memo : (B0_memo.t, string) result Lazy.t;
       ocamlpath : B0caml_ocamlpath.t;
-      tty_cap : Tty.cap; }
+      fmt_styler : Fmt.styler; }
 
-  let v ~cache_dir ~comp_target ~cwd ~log_level ~ocamlpath ~tty_cap () =
+  let v ~cache_dir ~comp_target ~cwd ~log_level ~ocamlpath ~fmt_styler () =
     let b0_cache_dir = Fpath.(cache_dir / B0_cli.Memo.cache_dir_name) in
     let memo = lazy (get_memo ~cwd ~cache_dir:b0_cache_dir) in
     { cache_dir; b0_cache_dir; comp_target; cwd; log_level; memo; ocamlpath;
-      tty_cap }
+      fmt_styler }
 
   let cache_dir c = c.cache_dir
   let b0_cache_dir c = c.b0_cache_dir
@@ -77,28 +77,28 @@ module Conf = struct
   let log_level c = c.log_level
   let memo c = Lazy.force c.memo
   let ocamlpath c = c.ocamlpath
-  let tty_cap c = c.tty_cap
+  let fmt_styler c = c.fmt_styler
 
   let env_find parse var =
     Os.Env.find' ~empty_is_none:true parse var |> Log.if_error ~use:None
 
-  let setup ~cache_dir ~comp_target ~log_level ~tty_cap () =
-    let tty_cap = B0_cli.B0_std.get_tty_cap tty_cap in
-    let log_level = B0_cli.B0_std.get_log_level log_level in
-    B0_cli.B0_std.setup tty_cap log_level ~log_spawns:Log.Debug;
+  let setup ~cache_dir ~comp_target ~log_level ~color () =
+    let fmt_styler = B0_std_cli.get_styler color in
+    let log_level = B0_std_cli.get_log_level log_level in
+    B0_std_cli.setup fmt_styler log_level ~log_spawns:Log.Debug;
     Result.bind (Os.Dir.cwd ()) @@ fun cwd ->
     Result.bind (get_cache_dir ~cwd cache_dir) @@ fun cache_dir ->
     let comp_target = get_comp_target comp_target in
     Result.bind (B0caml_ocamlpath.get None) @@ fun ocamlpath ->
-    Ok (v ~cache_dir ~comp_target ~cwd ~log_level ~ocamlpath ~tty_cap ())
+    Ok (v ~cache_dir ~comp_target ~cwd ~log_level ~ocamlpath ~fmt_styler ())
 
   let setup_with_cli = setup
   let setup_without_cli () =
     let cache_dir = env_find Fpath.of_string Env.cache_dir in
     let comp_target = env_find comp_target_of_string Env.comp_target in
-    let tty_cap = env_find B0_cli.B0_std.tty_cap_of_string Env.color in
+    let color = env_find B0_std_cli.styler_of_string Env.color in
     let log_level = env_find Log.level_of_string Env.verbosity in
-    setup ~cache_dir ~comp_target ~tty_cap ~log_level ()
+    setup ~cache_dir ~comp_target ~color ~log_level ()
 end
 
 module Err = struct
@@ -128,7 +128,7 @@ module Err = struct
     let directory (dir, m, err) = match err with
     | `Error e -> B0caml_script.loc_errf m " %s" e
     | `Miss ->
-        let pp_bold pp = Fmt.tty [`Bold] pp in
+        let pp_bold pp = Fmt.st' [`Bold] pp in
         match B0caml_ocamlpath.classify_path dir with
         | `Concrete dir ->
             B0caml_script.loc_errf
@@ -147,7 +147,7 @@ module Err = struct
     | `Error e -> B0caml_script.loc_errf m " %s" e
     | `Miss ->
         B0caml_script.loc_errf
-          m " Missing file %a" (Fmt.tty [`Bold] Fpath.pp_unquoted) file
+          m " Missing file %a" (Fmt.st' [`Bold] Fpath.pp_unquoted) file
     in
     String.concat "\n\n" (List.map mod_use errs)
 end
@@ -243,7 +243,7 @@ let maybe_write_build_log m ~build_dir =
 *)
   (* For now always write log. Let's see how much it gets on the budget. *)
   let log_file = script_build_log ~build_dir in
-  Log.if_error ~use:() (B0_cli.Memo.Log.(write log_file (of_memo m)))
+  Log.if_error ~use:() (B0_memo_log.(write log_file (of_memo m)))
 
 let compile_script c s =
   let ocamlpath = Conf.ocamlpath c in
