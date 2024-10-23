@@ -25,7 +25,7 @@ let delete_script_cache c script =
 let show_script_path c script =
   Result.bind (B0caml.get_script_file c script) @@ fun script_file ->
   let build_dir = B0caml.script_build_dir c ~script_file in
-  Ok (Log.app (fun m -> m "%a" Fpath.pp_unquoted build_dir))
+  Ok (Log.stdout (fun m -> m "%a" Fpath.pp_unquoted build_dir))
 
 let cache_cmd c action scripts =
   (* The notion of cache for `b0caml` is a bit different from a build
@@ -39,7 +39,7 @@ let cache_cmd c action scripts =
       | [] ->
           let cache_dir = B0caml.Conf.cache_dir c in
           let pp_path = Fmt.st' [`Bold] Fpath.pp_unquoted in
-          Log.app begin fun m ->
+          Log.stdout begin fun m ->
             m "Deleting %a, this may take some time..." pp_path cache_dir
           end;
           Log.if_error' ~use:B0caml.Exit.some_error @@
@@ -54,12 +54,13 @@ let cache_cmd c action scripts =
           Ok (List.fold_left delete B0caml.Exit.ok scripts)
       end
   | `Gc ->
-      Log.app (fun m -> m "the gc subcommand is TODO");
+      Log.stdout (fun m -> m "the gc subcommand is TODO");
       Ok B0caml.Exit.some_error
   | `Path ->
       begin match scripts with
       | [] ->
-          Log.app (fun m -> m "%a" Fpath.pp_unquoted (B0caml.Conf.cache_dir c));
+          Log.stdout
+            (fun m -> m "%a" Fpath.pp_unquoted (B0caml.Conf.cache_dir c));
           Ok B0caml.Exit.some_error
       | scripts ->
           let show_path acc script =
@@ -75,7 +76,7 @@ let cache_cmd c action scripts =
       Result.bind (B0_cli.File_cache.stats ~dir ~used) @@
       fun _ -> Ok B0caml.Exit.ok
   | `Trim ->
-      Log.app (fun m -> m "the trim subcommand is TODO");
+      Log.stdout (fun m -> m "the trim subcommand is TODO");
       Ok B0caml.Exit.some_error
 
 let deps_cmd c script_file raw directory mod_use root =
@@ -89,7 +90,7 @@ let deps_cmd c script_file raw directory mod_use root =
       let root (d, _) = B0caml_ocamlpath.logical_path_root_name d in
       let roots = String.distinct (List.filter_map root directories) in
       let pp_roots = Fmt.(vbox @@ list string) in
-      if roots <> [] then Log.app (fun m -> m "%a" pp_roots roots);
+      if roots <> [] then Log.stdout (fun m -> m "%a" pp_roots roots);
       Ok B0caml.Exit.ok
   | false ->
       let directories c s raw =
@@ -116,7 +117,7 @@ let deps_cmd c script_file raw directory mod_use root =
       in
       let pp_deps = Fmt.(vbox @@ list Fpath.pp_unquoted) in
       Result.bind deps @@ fun deps ->
-      if deps <> [] then Log.app (fun m -> m "%a" pp_deps deps);
+      if deps <> [] then Log.stdout (fun m -> m "%a" pp_deps deps);
       Ok B0caml.Exit.ok
 
 let exec_cmd c mode script_file script_args =
@@ -127,7 +128,7 @@ let exec_cmd c mode script_file script_args =
   match mode with
   | `Source ->
       Result.bind (B0caml.get_source c s) @@ fun src ->
-      Log.app (fun m -> m "%s" src); Ok B0caml.Exit.ok
+      Log.stdout (fun m -> m "%s" src); Ok B0caml.Exit.ok
   | `Compile ->
       Result.bind (B0caml.compile_script c s) @@ fun exe ->
       Ok B0caml.Exit.ok
