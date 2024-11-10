@@ -153,6 +153,7 @@ module Err = struct
 end
 
 let get_script_file c file =
+  if file = "-" then Ok Fpath.dash else
   Result.bind (Fpath.of_string file) @@ fun file ->
   Os.Path.realpath file
 
