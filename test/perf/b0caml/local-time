@@ -1,6 +1,6 @@
 #!/usr/bin/env b0caml
 #directory "+ptime"
-#directory "+ptime/clock/os"
+#directory "+ptime/clock"
 
 (* SPDX-License-Identifier: CC0-1.0 *)
 

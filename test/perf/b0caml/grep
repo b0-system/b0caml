@@ -18,7 +18,7 @@ let match_content re (file, data) =
 
 let main () =
   let pat, files = match List.tl (Array.to_list Sys.argv) with
-  | pat :: [] -> pat, [Os.File.dash] (* stdin *)
+  | pat :: [] -> pat, [Fpath.dash] (* stdin *)
   | pat :: files -> pat, List.filter_map filepath files
   | [] -> err "usage: PATTERN FILE..."; exit 2
   in
