@@ -1,6 +1,5 @@
 b0caml — Easy OCaml scripts
--------------------------------------------------------------------------------
-%%VERSION%%
+============================
 
 B0caml runs OCaml scripts like `ocaml`. However it provides direct
 support for using third-party modules and compiles scripts
