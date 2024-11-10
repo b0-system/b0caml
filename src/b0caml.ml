@@ -43,9 +43,12 @@ module Conf = struct
       Result.bind (Os.Dir.cache ()) @@ fun cache ->
       Ok Fpath.(cache / "b0caml")
 
-  let get_memo ~cwd ~cache_dir =
+  let get_memo ~cwd ~cache_dir script =
     let feedback =
-      let op_howto ppf o = Fmt.pf ppf "b0caml log --id %d" (B0_zero.Op.id o) in
+      let op_howto ppf o =
+        Fmt.pf ppf "b0caml log %a --id %d"
+          Fpath.pp_quoted script (B0_zero.Op.id o)
+      in
       let show_op = Log.Info and show_ui = Log.Error and level = Log.level () in
       B0_cli.Memo.pp_leveled_feedback ~op_howto ~show_op ~show_ui ~level
         Fmt.stderr
@@ -60,7 +63,7 @@ module Conf = struct
       comp_target : comp_target;
       cwd : Fpath.t;
       log_level : Log.level;
-      memo : (B0_memo.t, string) result Lazy.t;
+      memo : (Fpath.t -> (B0_memo.t, string) result) Lazy.t;
       ocamlpath : B0caml_ocamlpath.t;
       fmt_styler : Fmt.styler; }
 
@@ -252,7 +255,7 @@ let compile_script c s =
   let mod_uses = B0caml_script.resolve_mod_uses s in
   match dirs, mod_uses with
   | Ok dirs, Ok mod_uses ->
-      Result.bind (Conf.memo c) @@ fun m ->
+      Result.bind (Conf.memo c (B0caml_script.file s)) @@ fun m ->
       let memo_dir = Fpath.(Conf.cache_dir c / "lib_resolve") in
       let r = B0caml_resolver.create m ~memo_dir ~ocamlpath in
       let build_dir = script_build_dir c ~script_file:(B0caml_script.file s) in

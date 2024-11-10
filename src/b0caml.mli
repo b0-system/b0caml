@@ -98,8 +98,9 @@ module Conf : sig
   val ocamlpath : t -> B0caml_ocamlpath.t
   (** [ocamlpath] is the [OCAMLPATH] to consider. *)
 
-  val memo : t -> (B0_memo.t, string) result
-  (** [memo c] is the memoizer for the configuration. *)
+  val memo : t -> Fpath.t -> (B0_memo.t, string) result
+  (** [memo c script] is the memoizer for the configuration and script
+      [script]. *)
 
   val fmt_styler : t -> Fmt.styler
   (** [fmt_styler c] is formatting styler assumed for output. *)
