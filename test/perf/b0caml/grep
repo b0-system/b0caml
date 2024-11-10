@@ -2,6 +2,8 @@
 #directory "+re"
 #directory "+b0/std"
 
+(* SPDX-License-Identifier: CC0-1.0 *)
+
 open B0_std (* for the Fmt, Os and Fpath modules *)
 
 let err fmt = Fmt.pf Fmt.stderr (fmt ^^ "@.")

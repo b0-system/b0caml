@@ -2,6 +2,8 @@
 #directory "+ptime"
 #directory "+ptime/clock/os"
 
+(* SPDX-License-Identifier: CC0-1.0 *)
+
 let to_string () =
   let now = Ptime_clock.now () in
   let tz_offset_s = Ptime_clock.current_tz_offset_s () in

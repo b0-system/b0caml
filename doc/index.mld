@@ -28,7 +28,7 @@ grunt
 Read how to {{!page-manual.intro_using_mods}use third-party modules} and more in
 the {{!page-manual.intro}tutorial introduction}.
 
-{1:api API}
+{1:library_b0caml Library [b0caml]}
 
 This is an unstable API subject to change even between minor versions
 of the tool. Use at your own risk.
@@ -38,6 +38,5 @@ B0caml_opam
 B0caml_ocamlpath
 B0caml_resolver
 B0caml
-B0caml_cli
 B0caml_script
 }

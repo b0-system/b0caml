@@ -1,6 +1,8 @@
 #!/usr/bin/env b0caml
 #mod_use "conf.ml"
 
+(* SPDX-License-Identifier: CC0-1.0 *)
+
 let scream = match Conf.lang with | "fr" -> "Miaou!" | _ -> "Miaow!"
 let main () = print_endline scream
 let () = if !Sys.interactive then () else main ()

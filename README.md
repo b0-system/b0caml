@@ -53,3 +53,8 @@ than on the issue tracker.
 
 [doc]: https://erratique.ch/software/b0caml/doc
 [ocaml-forum]: https://discuss.ocaml.org/
+
+## Examples
+
+A few examples can be found in the [`test`](test/) directory.
+
