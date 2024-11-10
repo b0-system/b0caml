@@ -119,7 +119,14 @@ let find_archive_for_mod_ref r ~ext ref =
 let rec find_mod_refs r ~deps ~ext cobjs defined todo =
   match B0_ocaml.Modref.Set.choose todo with
   | exception Not_found ->
-      let cobjs = B0_ocaml.Cobj.Set.elements cobjs in
+      let cobjs =
+        let add cobj cobjs =
+          match Fpath.basename ~strip_ext:true (B0_ocaml.Cobj.file cobj) with
+          | "stdlib" -> cobjs
+          | _libname -> cobj :: cobjs
+        in
+        B0_ocaml.Cobj.Set.fold add cobjs []
+      in
       let cobjs, _ = B0_ocaml.Cobj.sort ~deps cobjs in
       Fut.return cobjs
   | ref ->
