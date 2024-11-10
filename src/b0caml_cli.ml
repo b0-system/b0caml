@@ -371,7 +371,7 @@ let cmd () =
     let doc = "Easy OCaml scripts" in
     let man = [
       `S Manpage.s_synopsis;
-      `Pre "$(mname) $(i,SCRIPT) [$(i,ARG)]..."; `Noblank;
+      `Pre "$(mname) $(b,--) $(i,SCRIPT) [$(i,ARG)]..."; `Noblank;
       `Pre "$(mname) [$(i,OPTION)]... $(i,SCRIPT) -- [$(i,ARG)]..."; `Noblank;
       `Pre "$(mname) $(i,COMMAND) [$(i,OPTION)]...";
       `S Manpage.s_description;
