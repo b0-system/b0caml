@@ -1,23 +1,34 @@
 opam-version: "2.0"
+name: "b0caml"
+synopsis: "Easy OCaml scripts"
+description: """\
+B0caml runs OCaml scripts like `ocaml`. However it provides direct
+support for using third-party modules and compiles scripts
+transparently to a cache of native (or bytecode) executables.
+
+B0caml is distributed under the ISC license and depends on [`b0`][b0]
+and [`cmdliner`][cmdliner]. It is pronounced /bokamɛl/ with a thick
+french accent.
+
+Homepage: https://erratique.ch/software/b0caml  
+
+[b0]: https://erratique.ch/software/b0
+[cmdliner]: https://erratique.ch/software/cmdliner"""
 maintainer: "Daniel Bünzli <daniel.buenzl i@erratique.ch>"
-authors: ["The b0caml programmers"]
+authors: "The b0caml programmers"
+license: "ISC"
+tags: ["org:erratique" "org:b0-system" "build" "dev" "scripting"]
 homepage: "https://erratique.ch/software/b0caml"
 doc: "https://erratique.ch/software/b0caml/doc"
-license: "ISC"
-dev-repo: "git+https://erratique.ch/repos/b0caml.git"
 bug-reports: "https://github.com/b0-system/b0caml/issues"
-tags: ["org:erratique" "org:b0-system" "build" "dev" "scripting" ]
-depends:
-[
-  "ocaml" {>= "4.03.0"}
+depends: [
+  "ocaml" {>= "4.14.0"}
   "ocamlfind" {build}
   "ocamlbuild" {build}
-  "topkg" {build & >= "0.9.0"}
+  "topkg" {build & >= "1.0.3"}
+  "cmdliner" {>= "1.3.0"}
   "b0"
 ]
-depopts: []
-build:
-[[
-  "ocaml" "pkg/pkg.ml" "build"
-          "--dev-pkg" "%{dev}%"
-]]
+build: ["ocaml" "pkg/pkg.ml" "build" "--dev-pkg" "%{dev}%"]
+dev-repo: "git+https://erratique.ch/repos/b0caml.git"
+pin-depends: ["b0.dev" "git+https://erratique.ch/repos/b0.git#master"]
