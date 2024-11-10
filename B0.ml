@@ -14,30 +14,41 @@ let b0caml = B0_ocaml.libname "b0caml"
 
 let b0caml_lib =
   let requires = [unix; cmdliner; b0_std; b0_memo; b0_file; b0_kit] in
-  let srcs = Fpath.[`Dir (v "src"); `X (v "src/b0caml_main.ml");] in
-  let name = "lib" in
-  B0_ocaml.lib b0caml ~name ~doc:"B0caml support library" ~requires ~srcs
+  let srcs = [`Dir ~/"src"] in
+  B0_ocaml.lib b0caml ~name:"b0caml-lib" ~requires ~srcs
 
 let b0caml =
   let requires = [cmdliner; b0_std; b0_memo; b0_file; b0_kit; b0caml] in
-  let srcs = Fpath.[`File (v "src/b0caml_main.ml")] in
-  B0_ocaml.exe "b0caml" ~public:true ~doc:"b0caml tool" ~requires ~srcs
+  let srcs = [`Dir ~/"src/tool"] in
+  B0_ocaml.exe "b0caml" ~public:true ~requires ~srcs
 
 (* Packs *)
 
 let default =
   let meta =
     B0_meta.empty
-    |> B0_meta.(add authors) ["The b0caml programmers"]
-    |> B0_meta.(add maintainers)
-       ["Daniel Bünzli <daniel.buenzl i@erratique.ch>"]
-    |> B0_meta.(add homepage) "https://erratique.ch/software/b0caml"
-    |> B0_meta.(add online_doc) "https://erratique.ch/software/b0caml/doc"
-    |> B0_meta.(add description_tags)
+    |> ~~ B0_meta.authors ["The b0caml programmers"]
+    |> ~~ B0_meta.maintainers ["Daniel Bünzli <daniel.buenzl i@erratique.ch>"]
+    |> ~~ B0_meta.homepage "https://erratique.ch/software/b0caml"
+    |> ~~ B0_meta.online_doc "https://erratique.ch/software/b0caml/doc"
+    |> ~~ B0_meta.repo "git+https://erratique.ch/repos/b0caml.git"
+    |> ~~ B0_meta.issues "https://github.com/b0-system/b0caml/issues"
+    |> ~~ B0_meta.description_tags
       ["org:erratique"; "org:b0-system"; "build"; "dev"; "scripting"]
-    |> B0_meta.(add licenses) ["ISC"; "PT-Sans-fonts"; "DejaVu-fonts"]
-    |> B0_meta.(add repo) "git+https://erratique.ch/repos/b0caml.git"
-    |> B0_meta.(add issues) "https://github.com/b0-system/b0caml/issues"
+    |> ~~ B0_meta.licenses ["ISC"]
+    |> ~~ B0_opam.build
+      {|[["ocaml" "pkg/pkg.ml" "build" "--dev-pkg" "%{dev}%" ]]|}
+    |> ~~ B0_opam.depends
+      [ "ocaml", {|>= "4.14.0"|};
+        "ocamlfind", {|build|};
+        "ocamlbuild", {|build|};
+        "topkg", {|build & >= "1.0.3"|};
+        "cmdliner", {|>= "1.3.0"|};
+        "b0", {||}; ]
+    |> ~~ B0_opam.pin_depends
+      [ "b0.dev", "git+https://erratique.ch/repos/b0.git#master"]
+    |> B0_meta.tag B0_opam.tag
+    |> B0_meta.tag B0_release.tag
   in
-  B0_pack.make "default" ~doc:"The b0caml project" ~meta ~locked:true @@
+  B0_pack.make "default" ~doc:"b0caml package" ~meta ~locked:true @@
   B0_unit.list ()
