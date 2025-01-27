@@ -91,11 +91,11 @@ let logical_dir_suggestions ~logical_dirs:dirs dir =
   | None -> dir | Some (root, _) -> root
   in
   let some ds = Some (List.map Fpath.v ds) in
-  let ds = String.suggest dirs dir in
+  let ds = String.spellcheck (fun yield -> List.iter yield dirs) dir in
   if ds <> [] then some ds else
   let ds = match List.mem dir_root dirs with
   | true -> List.filter (fun f -> String.starts_with ~prefix:dir_root f) dirs
-  | false -> String.suggest dirs dir
+  | false -> String.spellcheck (fun yield -> List.iter yield dirs) dir
   in
   if ds <> [] then some ds else None
 

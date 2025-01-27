@@ -30,7 +30,8 @@ let uninstalled ?search ?switch () =
 
 let pkg_suggestions ~pkgs ~pkg =
   if String.Set.mem pkg pkgs then Some (`Exact pkg) else
-  match String.suggest (String.Set.elements pkgs) pkg with
+  let pkgs yield = List.iter yield (String.Set.elements pkgs) in
+  match String.spellcheck pkgs pkg with
   | [] -> None | ss -> Some (`Fuzzy ss)
 
 let pp_maybe_try_install ~alt ppf opam =
