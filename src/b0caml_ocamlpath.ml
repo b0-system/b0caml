@@ -45,7 +45,7 @@ let get ?search = function
 | Some ps -> of_paths ps
 | None ->
     let var = "OCAMLPATH" and empty_is_none = false in
-    let path = Os.Env.find' ~empty_is_none Fpath.list_of_search_path var in
+    let path = Os.Env.var' ~empty_is_none Fpath.list_of_search_path var in
     match Log.if_error ~use:None path with
     | Some ps -> of_paths ps
     | None ->

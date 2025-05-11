@@ -177,7 +177,7 @@ let conf () =
     | Some _ as t -> t
     | None ->
         Log.if_error ~use:None @@
-        Os.Env.find' ~empty_is_none:true
+        Os.Env.var' ~empty_is_none:true
           B0caml.Conf.comp_target_of_string B0caml.Env.comp_target
     in
     Term.(const target $ cli_arg)

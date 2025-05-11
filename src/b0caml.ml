@@ -83,7 +83,7 @@ module Conf = struct
   let fmt_styler c = c.fmt_styler
 
   let env_find parse var =
-    Os.Env.find' ~empty_is_none:true parse var |> Log.if_error ~use:None
+    Os.Env.var' ~empty_is_none:true parse var |> Log.if_error ~use:None
 
   let setup ~cache_dir ~comp_target ~log_level ~color () =
     let fmt_styler = B0_std_cli.get_styler color in
