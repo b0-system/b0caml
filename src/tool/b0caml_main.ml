@@ -39,7 +39,8 @@ let main_with_cli () =
 
 let main () =
   try match List.tl (Array.to_list Sys.argv) with
-  | file :: args when Fpath.has_dir_sep file -> main_without_cli file args
+  | file :: args when String.exists Fpath.is_dir_sep_char file ->
+      main_without_cli file args
   | _ -> main_with_cli ()
   with
   | e ->

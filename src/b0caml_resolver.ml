@@ -53,13 +53,15 @@ let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
       let o =
         let base = Fpath.basename dir in
         let uniq =
-          Hash.to_hex (B0_memo.hash_string r.m (Fpath.to_string dir))
+          B0_hash.to_hex (B0_memo.hash_string r.m (Fpath.to_string dir))
         in
         Fpath.(r.memo_dir / Fmt.str "%s-%s%s.info" base uniq ext)
       in
       B0_memo.ready_files r.m cobjs;
       if ext = ".cmxa" then begin
-        List.iter (fun o -> B0_memo.ready_file r.m (Fpath.set_ext ".a" o)) cobjs
+        List.iter (fun o ->
+            B0_memo.ready_file r.m
+              (Fpath.set_ext ~multi:false ".a" o)) cobjs
       end;
       B0_ocaml.Cobj.write r.m ~cobjs ~o;
       ignore @@
@@ -82,7 +84,7 @@ let try_find_mod_ref_root_dir r ref =
   match String.Map.find name r.ocamlpath_root_dirs with
   | p -> Some p
   | exception Not_found ->
-      match String.cut_left ~sep:"_" name with
+      match String.cut ~sep:"_" name with
       | None -> None
       | Some (l, _) ->
           match String.Map.find name r.ocamlpath_root_dirs with
@@ -121,7 +123,7 @@ let rec find_mod_refs r ~deps ~ext cobjs defined todo =
   | exception Not_found ->
       let cobjs =
         let add cobj cobjs =
-          match Fpath.basename ~strip_ext:true (B0_ocaml.Cobj.file cobj) with
+          match Fpath.basename ~strip_exts:true (B0_ocaml.Cobj.file cobj) with
           | "stdlib" -> cobjs
           | _libname -> cobj :: cobjs
         in

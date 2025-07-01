@@ -166,7 +166,7 @@ let script_build_dir c ~script_file =
   (* A bit unclear what we want to use here maybe add what
      affects compilation environment *)
   let file = Fpath.to_string @@ script_file in
-  let hash = Hash.to_hex @@ Hash.Xxh3_64.string file in
+  let hash = B0_hash.to_hex @@ B0_hash.Xxh3_64.string file in
   Fpath.(Conf.cache_dir c / hash)
 
 let get_script c file =
@@ -219,7 +219,7 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let* archives = B0caml_resolver.find_archives_and_deps r ~code ~dirs in
   let archives = List.map B0_ocaml.Cobj.file archives in
   let incs = Cmd.unstamp @@ Cmd.paths ~slip:"-I" dirs in
-  let base = Fpath.strip_ext src_file in
+  let base = Fpath.strip_ext ~multi:false src_file in
   let writes = match code with
   | `Byte -> [ Fpath.(base + ".cmo") ]
   | `Native -> [ Fpath.(base + ".cmx"); Fpath.(base + ".o") ]

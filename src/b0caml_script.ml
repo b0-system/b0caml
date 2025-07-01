@@ -190,7 +190,7 @@ let of_string ~file src =
 type directory_resolution = Fpath.t * smeta
 type directory_resolution_error = Fpath.t * smeta * [`Error of string | `Miss ]
 
-let directory_resolution_dir (dir, _) = Fpath.add_dir_sep dir
+let directory_resolution_dir (dir, _) = Fpath.ensure_trailing_dir_sep dir
 
 let resolve_directory ~ocamlpath script_root ~errs ~dirs (d, m) =
   match B0caml_ocamlpath.classify_path d with
@@ -243,7 +243,7 @@ let resolve_mod_use script_root (mod_use, m) =
   | Ok false -> Error (impl_file, m, `Miss)
   | Ok true  ->
       if not (Fpath.has_ext ".ml" impl_file) then Ok (None, impl_file, m) else
-      let intf_file = Fpath.set_ext ".mli" impl_file in
+      let intf_file = Fpath.set_ext ~multi:false ".mli" impl_file in
       match Os.File.exists intf_file with
       | Error e -> Error (intf_file, m, `Error e)
       | Ok false -> Ok (None, impl_file, m)

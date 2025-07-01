@@ -15,7 +15,7 @@ let delete_script_cache c script =
       Result.bind (B0_memo_log.read log) @@ fun log ->
       Result.bind (Os.Path.delete ~recurse:true build_dir) @@ fun _ ->
       let add_key acc o = match B0_zero.Op.hash o with
-      | k when Hash.is_nil k -> acc | k -> Hash.to_hex k :: acc
+      | k when B0_hash.is_nil k -> acc | k -> B0_hash.to_hex k :: acc
       in
       let keys = List.fold_left add_key [] (B0_memo_log.ops log) in
       let dir = B0caml.Conf.b0_cache_dir c in
@@ -363,7 +363,7 @@ let cmd () =
     in
     Cmd.v (Cmd.info "log" ~doc ~sdocs ~exits ~envs ~man ~man_xrefs)
       Term.(const log_cmd $ conf $ script_file $ B0_pager.don't () $
-            B0_cli.Memo.Log.out_format_cli ~docs:docs_details () $
+            B0_cli.Memo.Log.format_cli ~docs:docs_details () $
             B0_std_cli.output_format ~docs:docs_format () $
             B0_cli.Op.query_cli ~docs:docs_select ())
   in

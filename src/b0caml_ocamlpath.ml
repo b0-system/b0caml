@@ -16,7 +16,7 @@ let classify_path d =
 let logical_path_root_name dep =
   let s = Fpath.to_string dep in
   if s.[0] <> '+' then None else
-  let last = match String.index s Fpath.dir_sep_char with
+  let last = match String.index s Fpath.natural_dir_sep_char with
   | exception Not_found -> String.length s - 1 | i -> i - 1
   in
   match String.subrange ~first:1 ~last s with "" -> None | s -> Some s
@@ -87,7 +87,7 @@ let logical_dirs p =
 let logical_dir_suggestions ~logical_dirs:dirs dir =
   let dirs = Fpath.Set.fold (fun p acc -> Fpath.to_string p :: acc) dirs [] in
   let dir = Fpath.to_string dir in
-  let dir_root = match String.cut_left ~sep:Fpath.dir_sep dir with
+  let dir_root = match String.cut ~sep:Fpath.natural_dir_sep dir with
   | None -> dir | Some (root, _) -> root
   in
   let some ds = Some (List.map Fpath.v ds) in
