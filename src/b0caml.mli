@@ -48,14 +48,8 @@ module Env : sig
   val cache_dir : string
   (** [cache_dir] is the variable used to sepcify the cache directory. *)
 
-  val color : string
-  (** [color] is the variable used to specify tty styling. *)
-
   val comp_target : string
   (** [comp_target] is the variable used to specify the compilation target. *)
-
-  val verbosity : string
-  (** [verbosity] is the variable used to specify log verbosity. *)
 end
 
 (** [b0caml] configuration. *)
@@ -72,10 +66,9 @@ module Conf : sig
   type t
   (** The type for configurations. *)
 
-  val v :
+  val make :
     cache_dir:Fpath.t -> comp_target:comp_target -> cwd:Fpath.t ->
-    log_level:Log.level -> ocamlpath:B0caml_ocamlpath.t ->
-    fmt_styler:Fmt.styler -> unit -> t
+    ocamlpath:B0caml_ocamlpath.t -> unit -> t
   (** [v] constructs a configuration with the given attributes.
       See the corresponding accessors for details. *)
 
@@ -92,9 +85,6 @@ module Conf : sig
   (** [cwd c] is the current working directory w.r.t. relative
       configuration file paths are expressed. *)
 
-  val log_level : t -> Log.level
-  (** [log_level c] is the desired log level. *)
-
   val ocamlpath : t -> B0caml_ocamlpath.t
   (** [ocamlpath] is the [OCAMLPATH] to consider. *)
 
@@ -102,24 +92,15 @@ module Conf : sig
   (** [memo c script] is the memoizer for the configuration and script
       [script]. *)
 
-  val fmt_styler : t -> Fmt.styler
-  (** [fmt_styler c] is formatting styler assumed for output. *)
-
   (** {1:setup Setup} *)
 
-  val setup_with_cli :
-    cache_dir:Fpath.t option -> comp_target:comp_target option ->
-    log_level:Log.level option -> color:Fmt.styler option option -> unit ->
-    (t, string) result
-  (** [setup_with_cli ~cache_dir ~comp_target ~color ~log_level ()]
-      determines and setups a configuration with the given values. These are
-      expected to have been determined by environment variables and command
-      line arguments. *)
+  val of_cli : unit -> (t, string) result Cmdliner.Term.t
+  (** [of_cli] is a configuration command line interaface. This
+      setups logging by side-effect. *)
 
-  val setup_without_cli : unit -> (t, string) result
-  (** [setup_without_cli] determines and setups a configuration
-      without without command line arguments. This looks up
-      environment variables and determines defaults. *)
+  val of_env : unit -> (t, string) result
+  (** [of ()] is an configuration read from the environments. This
+      setups logging by side-effect. *)
 end
 
 (** [b0caml] error messages. *)

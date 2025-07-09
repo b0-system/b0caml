@@ -4,6 +4,7 @@
   ---------------------------------------------------------------------------*)
 
 open B0_std
+open Result.Syntax
 
 let run_main f = Log.time (fun _ m -> m "total time b0caml %%VERSION%%") f
 let exit_main = function
@@ -18,9 +19,9 @@ let main_without_cli script_file script_args =
   let res =
     run_main @@ fun () ->
     Log.if_error ~header:"" ~use:B0caml.Exit.comp_error @@
-    Result.bind (B0caml.Conf.setup_without_cli ()) @@ fun c ->
-    Result.bind (B0caml.get_script c script_file) @@ fun s ->
-    Result.bind (B0caml.compile_script c s) @@ fun exe ->
+    let* conf = B0caml.Conf.of_env () in
+    let* script = B0caml.get_script conf script_file in
+    let* exe = B0caml.compile_script conf script in
     Ok (B0caml.Exit.Exec (exe, Cmd.list (script_file :: script_args)))
   in
   exit_main res

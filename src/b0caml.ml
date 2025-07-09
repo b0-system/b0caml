@@ -4,7 +4,7 @@
   ---------------------------------------------------------------------------*)
 
 open B0_std
-open Fut.Syntax
+open Result.Syntax
 
 module Exit = struct
   type t = Code of int | Exec of Fpath.t * Cmd.t
@@ -19,9 +19,7 @@ end
 
 module Env = struct
   let cache_dir = "B0CAML_CACHE_DIR"
-  let color = "B0CAML_COLOR"
   let comp_target = "B0CAML_COMPILATION_TARGET"
-  let verbosity = "B0CAML_VERBOSITY"
 end
 
 module Conf = struct
@@ -62,46 +60,77 @@ module Conf = struct
       b0_cache_dir : Fpath.t;
       comp_target : comp_target;
       cwd : Fpath.t;
-      log_level : Log.level;
       memo : (Fpath.t -> (B0_memo.t, string) result) Lazy.t;
-      ocamlpath : B0caml_ocamlpath.t;
-      fmt_styler : Fmt.styler; }
+      ocamlpath : B0caml_ocamlpath.t }
 
-  let v ~cache_dir ~comp_target ~cwd ~log_level ~ocamlpath ~fmt_styler () =
+  let make ~cache_dir ~comp_target ~cwd ~ocamlpath () =
     let b0_cache_dir = Fpath.(cache_dir / B0_cli.Memo.cache_dir_name) in
     let memo = lazy (get_memo ~cwd ~cache_dir:b0_cache_dir) in
-    { cache_dir; b0_cache_dir; comp_target; cwd; log_level; memo; ocamlpath;
-      fmt_styler }
+    { cache_dir; b0_cache_dir; comp_target; cwd; memo; ocamlpath }
 
   let cache_dir c = c.cache_dir
   let b0_cache_dir c = c.b0_cache_dir
   let comp_target c = c.comp_target
   let cwd c = c.cwd
-  let log_level c = c.log_level
   let memo c = Lazy.force c.memo
   let ocamlpath c = c.ocamlpath
-  let fmt_styler c = c.fmt_styler
 
   let env_find parse var =
     Os.Env.var' ~empty_is_none:true parse var |> Log.if_error ~use:None
 
-  let setup ~cache_dir ~comp_target ~log_level ~color () =
-    let fmt_styler = B0_std_cli.get_styler color in
-    let log_level = B0_std_cli.get_log_level log_level in
-    B0_std_cli.setup fmt_styler log_level ~log_spawns:Log.Debug;
-    Result.bind (Os.Dir.cwd ()) @@ fun cwd ->
-    Result.bind (get_cache_dir ~cwd cache_dir) @@ fun cache_dir ->
+  let setup ~cache_dir ~comp_target () =
+    let* cwd = Os.Dir.cwd () in
+    let* cache_dir = get_cache_dir ~cwd cache_dir in
     let comp_target = get_comp_target comp_target in
-    Result.bind (B0caml_ocamlpath.get None) @@ fun ocamlpath ->
-    Ok (v ~cache_dir ~comp_target ~cwd ~log_level ~ocamlpath ~fmt_styler ())
+    let* ocamlpath = B0caml_ocamlpath.get None in
+    Ok (make ~cache_dir ~comp_target ~cwd ~ocamlpath ())
 
-  let setup_with_cli = setup
-  let setup_without_cli () =
+  let of_cli () = (* Behind a thunk, no need to evaluate on scripts *)
+    let open Cmdliner in
+    let open Cmdliner.Term.Syntax in
+    let docs = Manpage.s_common_options in
+    let+ () = B0_std_cli.set_log_level ()
+    and+ comp_target =
+      let env =
+        let doc = "Force default compilation target to $(b,byte), $(b,native) \
+                   or $(b,auto). See $(b,--byte) and $(b,--native) options."
+        in
+        Cmd.Env.info ~doc Env.comp_target
+      in
+      let targets =
+        let t enum arg doc = Some enum, Arg.info [arg] ~doc ~docs ~env in
+        [ t `Byte "byte" "Compile to bytecode (default if no native code).";
+          t `Native "native" "Compile to native code (default if available)." ]
+      in
+      let+ cli_arg = Arg.(value & vflag None targets) in
+      (* cmdliner doesn't support env for vflag we do it manually here *)
+      let target = function
+      | Some _ as t -> t
+      | None ->
+          Log.if_error ~use:None @@
+          Os.Env.var' ~empty_is_none:true
+            comp_target_of_string Env.comp_target
+      in
+      target cli_arg
+    and+ cache_dir =
+      let env = Cmd.Env.info Env.cache_dir in
+      let doc = "Cache directory." and docv = "PATH" in
+      let none = "$(b,XDG_CACHE_HOME)/b0caml" in
+      Arg.(value & opt (Arg.some ~none B0_std_cli.fpath) None &
+           info ["cache-dir"] ~doc ~docv ~docs ~env)
+    in
+    setup ~cache_dir ~comp_target ()
+
+  let of_env () =
     let cache_dir = env_find Fpath.of_string Env.cache_dir in
     let comp_target = env_find comp_target_of_string Env.comp_target in
-    let color = env_find B0_std_cli.styler_of_string Env.color in
-    let log_level = env_find Log.level_of_string Env.verbosity in
-    setup ~cache_dir ~comp_target ~color ~log_level ()
+    let log_level =
+      let var = Cmdliner.Cmd.Env.info_var B0_std_cli.log_level_var in
+      env_find Log.level_of_string var
+    in
+    let log_level = Option.value ~default:Log.Warning log_level in
+    B0_std_cli.setup_log log_level ~log_spawns:Log.Debug;
+    setup ~cache_dir ~comp_target ()
 end
 
 module Err = struct
@@ -180,6 +209,8 @@ let get_source c s =
   fun mod_use_resolutions -> B0caml_script.src ~mod_use_resolutions s
 
 (* Compilation *)
+
+open Fut.Syntax
 
 let write_source m build_dir s ~mod_uses ~src_file =
   let mod_use_files = B0caml_script.mod_use_resolution_files in
