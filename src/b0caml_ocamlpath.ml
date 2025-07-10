@@ -87,7 +87,7 @@ let logical_dirs p =
 let logical_dir_suggestions ~logical_dirs:dirs dir =
   let dirs = Fpath.Set.fold (fun p acc -> Fpath.to_string p :: acc) dirs [] in
   let dir = Fpath.to_string dir in
-  let dir_root = match String.cut ~sep:Fpath.natural_dir_sep dir with
+  let dir_root = match String.split_first ~sep:Fpath.natural_dir_sep dir with
   | None -> dir | Some (root, _) -> root
   in
   let some ds = Some (List.map Fpath.v ds) in

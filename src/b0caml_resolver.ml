@@ -84,7 +84,7 @@ let try_find_mod_ref_root_dir r ref =
   match String.Map.find name r.ocamlpath_root_dirs with
   | p -> Some p
   | exception Not_found ->
-      match String.cut ~sep:"_" name with
+      match String.split_first ~sep:"_" name with
       | None -> None
       | Some (l, _) ->
           match String.Map.find name r.ocamlpath_root_dirs with
