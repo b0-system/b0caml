@@ -89,7 +89,8 @@ module Conf = struct
     let open Cmdliner in
     let open Cmdliner.Term.Syntax in
     let docs = Manpage.s_common_options in
-    let+ () = B0_std_cli.set_log_level ()
+    let+ () = B0_std_cli.set_no_color ()
+    and+ () = B0_std_cli.set_log_level ()
     and+ comp_target =
       let env =
         let doc = "Force default compilation target to $(b,byte), $(b,native) \
@@ -116,7 +117,7 @@ module Conf = struct
       let env = Cmd.Env.info Env.cache_dir in
       let doc = "Cache directory." and docv = "PATH" in
       let none = "$(b,XDG_CACHE_HOME)/b0caml" in
-      Arg.(value & opt (Arg.some ~none B0_std_cli.fpath) None &
+      Arg.(value & opt (Arg.some ~none B0_std_cli.filepath) None &
            info ["cache-dir"] ~doc ~docv ~docs ~env)
     in
     setup ~cache_dir ~comp_target ()
@@ -129,7 +130,7 @@ module Conf = struct
       env_find Log.level_of_string var
     in
     let log_level = Option.value ~default:Log.Warning log_level in
-    B0_std_cli.setup_log log_level ~log_spawns:Log.Debug;
+    Log.set_level log_level;
     setup ~cache_dir ~comp_target ()
 end
 
