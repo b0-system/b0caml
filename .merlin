@@ -1,3 +1,2 @@
 PKG cmdliner b0.kit
-B _b0/**
-B _build/**
+B _b0/b/user/**

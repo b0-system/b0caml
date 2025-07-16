@@ -47,13 +47,13 @@ module Conf = struct
         Fmt.pf ppf "b0caml log %a --id %d"
           Fpath.pp_quoted script (B0_zero.Op.id o)
       in
-      let show_op = Log.Info and show_ui = Log.Error and level = Log.level () in
-      B0_cli.Memo.pp_leveled_feedback ~op_howto ~show_op ~show_ui ~level
-        Fmt.stderr
+      let output_op_level = Log.Info and output_ui_level = Log.Error in
+      let level = Log.level () in
+      B0_memo_cli.pp_leveled_feedback
+        ~op_howto ~output_op_level ~output_ui_level ~level Fmt.stderr
     in
-    let trash_dir = Fpath.(cache_dir / B0_cli.Memo.trash_dir_name) in
-    let jobs = 4 in
-    B0_memo.make ~cwd ~cache_dir ~trash_dir ~jobs ~feedback ()
+    let trash_dir = Fpath.(cache_dir / B0_memo_cli.trash_dirname) in
+    B0_memo.make ~cwd ~cache_dir ~trash_dir ~feedback ()
 
   type t =
     { cache_dir : Fpath.t;
@@ -64,7 +64,7 @@ module Conf = struct
       ocamlpath : B0caml_ocamlpath.t }
 
   let make ~cache_dir ~comp_target ~cwd ~ocamlpath () =
-    let b0_cache_dir = Fpath.(cache_dir / B0_cli.Memo.cache_dir_name) in
+    let b0_cache_dir = Fpath.(cache_dir / B0_memo_cli.File_cache.dirname) in
     let memo = lazy (get_memo ~cwd ~cache_dir:b0_cache_dir) in
     { cache_dir; b0_cache_dir; comp_target; cwd; memo; ocamlpath }
 

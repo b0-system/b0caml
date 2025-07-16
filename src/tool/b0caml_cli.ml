@@ -14,22 +14,25 @@ let delete_script_cache conf script =
   let log = B0caml.script_build_log ~build_dir in
   let* log = B0_memo_log.read log in
   let* _existed = Os.Path.delete ~recurse:true build_dir in
-  let add_key acc o = match B0_zero.Op.hash o with
-  | k when B0_hash.is_nil k -> acc | k -> B0_hash.to_hex k :: acc
+  let keys =
+    let add_key acc o = match B0_zero.Op.hash o with
+    | k when B0_hash.is_nil k -> acc | k -> B0_hash.to_hex k :: acc
+    in
+    List.fold_left add_key [] (B0_memo_log.ops log)
   in
-  let keys = List.fold_left add_key [] (B0_memo_log.ops log) in
   let dir = B0caml.Conf.b0_cache_dir conf in
-  let* _existed = B0_cli.File_cache.delete ~dir (`Keys keys) in
+  let kind = `Any and used = (* ignored *) String.Set.empty in
+  let* _existed = B0_memo_cli.File_cache.delete ~dir ~kind ~used (`Keys keys) in
   Ok ()
 
-let show_script_path conf script =
+let output_script_path conf script =
   let* script_file = B0caml.get_script_file conf script in
   let build_dir = B0caml.script_build_dir conf ~script_file in
-  Ok (Log.stdout (fun m -> m "%a" Fpath.pp_unquoted build_dir))
+  Ok (Fmt.pr "%a@." Fpath.pp_unquoted build_dir)
 
 let cache ~conf ~action ~scripts =
   (* The notion of cache for `b0caml` is a bit different from a build
-     system one. So B00_ui.File_cache cannot simply be reused off the
+     system one. So B0_memo_cli.File_cache cannot simply be reused off the
      shelf. Some adjustements should be made here or generalization there. *)
   Log.if_error ~use:B0caml.Exit.conf_error @@
   let* conf in match action with
@@ -62,17 +65,17 @@ let cache ~conf ~action ~scripts =
             (fun m -> m "%a" Fpath.pp_unquoted (B0caml.Conf.cache_dir conf));
           Ok B0caml.Exit.some_error
       | scripts ->
-          let show_path acc script =
+          let output_path acc script =
             let ok () = acc in
             let error e = Log.if_error ~use:B0caml.Exit.some_error (Error e) in
-            Result.fold ~ok ~error (show_script_path conf script)
+            Result.fold ~ok ~error (output_script_path conf script)
           in
-          Ok (List.fold_left show_path B0caml.Exit.ok scripts)
+          Ok (List.fold_left output_path B0caml.Exit.ok scripts)
       end
   | `Stats ->
       let dir = B0caml.Conf.b0_cache_dir conf in
       let used = String.Set.empty in (* TODO *)
-      let* _ = B0_cli.File_cache.stats ~dir ~used in
+      let* _ = B0_memo_cli.File_cache.stats ~dir ~used in
       Ok B0caml.Exit.ok
   | `Trim ->
       Log.stdout (fun m -> m "the trim subcommand is TODO");
@@ -140,19 +143,21 @@ let exec ~conf ~mode ~script_file ~script_args =
   | `Utop -> failwith "TODO"
   | `Top -> failwith "TODO"
 
-let log ~conf ~script_file ~no_pager ~format ~output_details ~op_query =
+let log ~conf ~script_file ~no_pager ~format ~output_details ~query =
   Log.if_error ~use:B0caml.Exit.conf_error @@
   let* conf in
-  let don't = no_pager || format = `Trace_event in
-  let* pager = B0_pager.find ~don't () in
+  let no_pager = no_pager || format = `Trace_event in
+  let* pager = B0_pager.find ~no_pager () in
   let* () = B0_pager.page_stdout pager in
   let* script_file = B0caml.get_script_file conf script_file in
   let build_dir = B0caml.script_build_dir conf ~script_file in
   let log_path = B0caml.script_build_log ~build_dir in
   Log.if_error' ~use:B0caml.Exit.miss_log_error @@
   let* log = B0_memo_log.read log_path in
-  B0_cli.Memo.Log.out
-    Fmt.stdout format output_details op_query ~path:log_path log;
+  let pp =
+    B0_memo_cli.Log.pp ~format ~output_details ~query ~path:log_path ()
+  in
+  Fmt.pr "@[<v>%a@]@?" pp log;
   Ok B0caml.Exit.ok
 
 (* Command line interface *)
@@ -205,7 +210,7 @@ let cmd () = (* Behind a thunk, no need to evaluate on scripts *)
                       hardlinks)");
       `I ("$(b,path) [$(i,SCRIPT)]...", "Display the path to the cache or \
            the given script caches.");
-      `I ("$(b,stats)", "Show cache statistics.");
+      `I ("$(b,stats)", "Output cache statistics.");
       `I ("$(b,trim)", "Trim the cache to 50% of its size.");
       man_see_manual; ]
     in
@@ -230,14 +235,14 @@ let cmd () = (* Behind a thunk, no need to evaluate on scripts *)
     cache ~conf ~action ~scripts
   in
   let deps_cmd =
-    let doc = "Show script dependencies" in
+    let doc = "Output script dependencies" in
     let man = [
       `S Manpage.s_description;
-      `P "The $(cmd) command shows the $(b,#directory) and \
+      `P "$(cmd) outputs the $(b,#directory) and \
           $(b,#mod_use) dependency resolutions of a script. If \
-          $(b,--raw) is specified directive arguments are shown without \
+          $(b,--raw) is specified directive arguments are output without \
           resolution.";
-      `P "Without options shows the result of both $(b,--directory) and \
+      `P "Without options outputs the result of both $(b,--directory) and \
           $(b,--mod-use).";
       man_see_manual; ]
     in
@@ -250,15 +255,15 @@ let cmd () = (* Behind a thunk, no need to evaluate on scripts *)
     let+ conf and+ script_file
     and+ directory =
       flag "directory"
-        "Show $(b,#directory) resolutions. These resolutions \
+        "Output $(b,#directory) resolutions. These resolutions \
          always have a trailing directory seperator; this can be used to
          distinguish them from $(b,--mod-use) resolutions."
-    and+ mod_use = flag "mod-use" "Show $(b,#mod_use) resolutions."
+    and+ mod_use = flag "mod-use" "Output $(b,#mod_use) resolutions."
     and+ root =
       flag "root" "Only list root names of $(b,+) $(b,#directory) directives. \
                    Takes over other options."
     and+ raw =
-      flag "raw" "Show raw directive arguments without resolving them."
+      flag "raw" "Output raw directive arguments without resolving them."
     in
     deps ~conf ~script_file ~raw ~directory ~mod_use ~root
   in
@@ -300,28 +305,27 @@ let cmd () = (* Behind a thunk, no need to evaluate on scripts *)
     Cmd.make (Cmd.info "exec" ~doc ~sdocs ~exits ~man) term, term
   in
   let log_cmd =
-    let doc = "Show script build logs" in
-    let envs = B0_pager.Env.infos in
+    let doc = "Output script build logs" in
     let man = [
       `S Manpage.s_description;
-      `P "The $(cmd) command shows build log of a script.";
-      `Blocks B0_cli.Op.query_man;
+      `P "$(cmd) outputs the build log of a script.";
+      `Blocks B0_memo_cli.Op.query_man;
       `S Manpage.s_arguments;
       `S B0_std_cli.s_output_details_options;
-      `S B0_cli.Memo.Log.s_output_format_options;
-      `S B0_cli.Op.s_selection_options;
+      `S B0_memo_cli.Log.s_output_format_options;
+      `S B0_memo_cli.Op.s_selection_options;
     ]
     in
     let exits =
       exit_info B0caml.Exit.miss_dep_error "on missing log." :: exits
     in
-    Cmd.make (Cmd.info "log" ~doc ~sdocs ~exits ~envs ~man) @@
+    Cmd.make (Cmd.info "log" ~doc ~sdocs ~exits ~man) @@
     let+ conf and+ script_file
-    and+ no_pager = B0_pager.don't ()
-    and+ format = B0_cli.Memo.Log.format_cli ()
+    and+ no_pager = B0_pager.no_pager ()
+    and+ format = B0_memo_cli.Log.format_cli ()
     and+ output_details = B0_std_cli.output_details ()
-    and+ op_query = B0_cli.Op.query_cli () in
-    log ~conf ~script_file ~no_pager  ~format ~output_details ~op_query
+    and+ query = B0_memo_cli.Op.query_cli () in
+    log ~conf ~script_file ~no_pager  ~format ~output_details ~query
   in
   (* Main command *)
   let doc = "Easy OCaml scripts" in
@@ -348,5 +352,7 @@ let cmd () = (* Behind a thunk, no need to evaluate on scripts *)
         contact information."; ]
   in
   let exits = exec_exits in
-  Cmd.group Cmd.(info "b0caml" ~version:"%%VERSION%%" ~doc ~sdocs ~exits ~man)
-    ~default:exec_term [cache_cmd; deps_cmd; exec_cmd; log_cmd;]
+  let version = "%%VERSION%%" in
+  let info = Cmd.(info "b0caml" ~version ~doc ~sdocs ~exits ~man) in
+  Cmd.group info ~default:exec_term @@
+  [cache_cmd; deps_cmd; exec_cmd; log_cmd;]
