@@ -231,8 +231,8 @@ let write_source m build_dir s ~mod_uses ~src_file =
       present in the -I dirs and find their rec. deps. Only depend
       on these files. *)
 
-let byte_comp m = B0_memo.tool m B0_ocaml.Tool.ocamlc, `Byte
-let native_comp m = B0_memo.tool m B0_ocaml.Tool.ocamlopt, `Native
+let byte_comp m = B0_memo.tool m B0_ocaml.Tool.ocamlc, B0_ocaml.Code.Byte
+let native_comp m = B0_memo.tool m B0_ocaml.Tool.ocamlopt, B0_ocaml.Code.Native
 
 let find_comp c m = match Conf.comp_target c with
 | `Byte -> Fut.return (byte_comp m)
@@ -241,7 +241,7 @@ let find_comp c m = match Conf.comp_target c with
     let* ocamlopt = B0_memo.tool_opt m B0_ocaml.Tool.ocamlopt in
     Fut.return @@ match ocamlopt with
     | None -> byte_comp m
-    | Some comp -> comp, `Native
+    | Some comp -> comp, B0_ocaml.Code.Native
 
 let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let dirs = List.map B0caml_script.directory_resolution_dir dirs in
@@ -253,8 +253,9 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let incs = Cmd.unstamp @@ Cmd.paths ~slip:"-I" dirs in
   let base = Fpath.strip_ext ~multi:false src_file in
   let writes = match code with
-  | `Byte -> [ Fpath.(base + ".cmo") ]
-  | `Native -> [ Fpath.(base + ".cmx"); Fpath.(base + ".o") ]
+  | B0_ocaml.Code.Byte -> [ Fpath.(base + ".cmo") ]
+  | B0_ocaml.Code.Native -> [ Fpath.(base + ".cmx"); Fpath.(base + ".o") ]
+  | B0_ocaml.Code.Wasm -> assert false
   in
   let exe = Fpath.(build_dir / "exe" ) in
   let writes = exe :: Fpath.(base + ".cmi") :: writes in

@@ -151,7 +151,11 @@ let rec find_mod_refs r ~deps ~ext cobjs defined todo =
               find_mod_refs r ~deps ~ext cobjs defined todo
 
 let find_archives_and_deps ?(deps = B0_ocaml.Cobj.link_deps) r ~code ~dirs =
-  let ext = match code with `Byte -> ".cma" | `Native -> ".cmxa" in
+  let ext = match code with
+  | B0_ocaml.Code.Byte -> ".cma"
+  | B0_ocaml.Code.Native -> ".cmxa"
+  | B0_ocaml.Code.Wasm -> assert false
+  in
   let* roots = Fut.of_list (List.map (get_cobjs_info r ~ext) dirs) in
   let roots = List.concat roots in
   let defined, to_find =
