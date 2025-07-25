@@ -42,7 +42,7 @@ let default =
       [ "ocaml", {|>= "4.14.0"|};
         "ocamlfind", {|build|};
         "ocamlbuild", {|build|};
-        "topkg", {|build & >= "1.0.3"|};
+        "topkg", {|build & >= "1.1.0"|};
         "cmdliner", {|>= "1.3.0"|};
         "b0", {||}; ]
     |> ~~ B0_opam.pin_depends
