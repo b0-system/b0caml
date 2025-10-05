@@ -9,8 +9,10 @@ open B0_std.Fut.Syntax
 let ocamlpath_root_dirs ~ocamlpath =
   let add_dir acc dir =
     let add_root _ name p ds = String.Map.add_to_list name p ds in
+    let dotfiles = false and follow_symlinks = true and recurse = false in
     Log.if_error ~use:acc
-      (Os.Dir.fold_dirs ~rel:false ~recurse:false add_root dir acc)
+      (Os.Dir.fold_dirs
+         ~rel:false ~dotfiles ~follow_symlinks ~recurse add_root dir acc)
   in
   let ocamlpath = B0caml_ocamlpath.dirs ocamlpath in
   List.fold_left add_dir String.Map.empty (List.rev ocamlpath)
@@ -41,7 +43,8 @@ let index_dir ~ext r dir =
       acc
   | _ -> if Fpath.has_ext ext f then (f :: acc) else acc
   in
-  (Os.Dir.fold ~recurse:false add dir [])
+  let dotfiles = false and follow_symlinks = true and recurse = false in
+  (Os.Dir.fold ~dotfiles ~follow_symlinks ~recurse add dir [])
 
 let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
 | info -> info
@@ -61,7 +64,7 @@ let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
       if ext = ".cmxa" then begin
         List.iter (fun o ->
             B0_memo.ready_file r.m
-              (Fpath.set_ext ~multi:false ".a" o)) cobjs
+              (Fpath.with_ext ~multi:false ".a" o)) cobjs
       end;
       B0_ocaml.Cobj.write r.m ~cobjs ~o;
       ignore @@
@@ -123,7 +126,7 @@ let rec find_mod_refs r ~deps ~ext cobjs defined todo =
   | exception Not_found ->
       let cobjs =
         let add cobj cobjs =
-          match Fpath.basename ~strip_exts:true (B0_ocaml.Cobj.file cobj) with
+          match Fpath.basename ~drop_exts:true (B0_ocaml.Cobj.file cobj) with
           | "stdlib" -> cobjs
           | _libname -> cobj :: cobjs
         in
