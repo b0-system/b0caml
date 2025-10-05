@@ -251,7 +251,7 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let* archives = B0caml_resolver.find_archives_and_deps r ~code ~dirs in
   let archives = List.map B0_ocaml.Cobj.file archives in
   let incs = Cmd.unstamp @@ Cmd.paths ~slip:"-I" dirs in
-  let base = Fpath.strip_ext ~multi:false src_file in
+  let base = Fpath.drop_ext ~multi:false src_file in
   let writes = match code with
   | B0_ocaml.Code.Byte -> [ Fpath.(base + ".cmo") ]
   | B0_ocaml.Code.Native -> [ Fpath.(base + ".cmx"); Fpath.(base + ".o") ]

@@ -67,7 +67,8 @@ let get ?search = function
             let pp = Fmt.st [`Bold] in
             Fmt.error "@[<v>Could not detect an OCaml install.@,\
                             Try setting the %a variable.@]" pp "OCAMLPATH"
-        | Some opam, Some ocaml when Fpath.is_prefix opam ocaml ->
+        | Some opam, Some ocaml
+          when Fpath.strictly_starts_with ~prefix:opam ocaml ->
             Ok { dirs = [opam]; ocaml_logical_dir = ocaml }
         | Some opam, Some ocaml ->
             Ok { dirs = [opam; ocaml]; ocaml_logical_dir = ocaml }
@@ -79,7 +80,9 @@ let logical_dirs p =
   let add_dir acc dir =
     let add_path _ _ p ds = Fpath.Set.add Fpath.(v ("+" ^ to_string p)) ds in
     Result.error_to_failure @@
-    Os.Dir.fold_dirs ~rel:true ~recurse:true add_path dir acc
+    let dotfiles = false and follow_symlinks = true and recurse = true in
+    Os.Dir.fold_dirs
+      ~rel:true ~dotfiles ~follow_symlinks ~recurse add_path dir acc
   in
   try Ok (List.fold_left add_dir Fpath.Set.empty p.dirs) with
   | Failure e -> Error e

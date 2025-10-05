@@ -243,7 +243,7 @@ let resolve_mod_use script_root (mod_use, m) =
   | Ok false -> Error (impl_file, m, `Miss)
   | Ok true  ->
       if not (Fpath.has_ext ".ml" impl_file) then Ok (None, impl_file, m) else
-      let intf_file = Fpath.set_ext ~multi:false ".mli" impl_file in
+      let intf_file = Fpath.with_ext ~multi:false ".mli" impl_file in
       match Os.File.exists intf_file with
       | Error e -> Error (intf_file, m, `Error e)
       | Ok false -> Ok (None, impl_file, m)
