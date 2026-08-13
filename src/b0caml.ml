@@ -7,7 +7,7 @@ open B0_std
 open Result.Syntax
 
 module Exit = struct
-  type t = Code of int | Exec of Fpath.t * Cmd.t
+  type t = Code of int | Exec of Filepath.t * Cmd.t
   let code = function Code c -> c | _ -> invalid_arg "not an exit code"
   let conf_error = Code 123
   let comp_error = Code 127
@@ -36,35 +36,35 @@ module Conf = struct
       Fmt.error "%a" Fmt.(unknown' ~kind pp_target ~hint:must_be) (e, dom)
 
   let get_cache_dir ~cwd = function
-  | Some d -> Ok Fpath.(cwd // d)
+  | Some d -> Ok Filepath.(cwd // d)
   | None ->
       Result.bind (Os.Dir.cache ()) @@ fun cache ->
-      Ok Fpath.(cache / "b0caml")
+      Ok Filepath.(cache / "b0caml")
 
   let get_memo ~cwd ~cache_dir script =
     let feedback =
       let op_howto ppf o =
         Fmt.pf ppf "b0caml log %a --id %d"
-          Fpath.pp_quoted script (B0_zero.Op.id o)
+          Filepath.pp_quoted script (B0_zero.Op.id o)
       in
       let output_op_level = Log.Info and output_ui_level = Log.Error in
       let level = Log.level () in
       B0_memo_cli.pp_leveled_feedback
         ~op_howto ~output_op_level ~output_ui_level ~level Fmt.stderr
     in
-    let trash_dir = Fpath.(cache_dir / B0_memo_cli.trash_dirname) in
+    let trash_dir = Filepath.(cache_dir / B0_memo_cli.trash_dirname) in
     B0_memo.make ~cwd ~cache_dir ~trash_dir ~feedback ()
 
   type t =
-    { cache_dir : Fpath.t;
-      b0_cache_dir : Fpath.t;
+    { cache_dir : Filepath.t;
+      b0_cache_dir : Filepath.t;
       comp_target : comp_target;
-      cwd : Fpath.t;
-      memo : (Fpath.t -> (B0_memo.t, string) result) Lazy.t;
+      cwd : Filepath.t;
+      memo : (Filepath.t -> (B0_memo.t, string) result) Lazy.t;
       ocamlpath : B0caml_ocamlpath.t }
 
   let make ~cache_dir ~comp_target ~cwd ~ocamlpath () =
-    let b0_cache_dir = Fpath.(cache_dir / B0_memo_cli.File_cache.dirname) in
+    let b0_cache_dir = Filepath.(cache_dir / B0_memo_cli.File_cache.dirname) in
     let memo = lazy (get_memo ~cwd ~cache_dir:b0_cache_dir) in
     { cache_dir; b0_cache_dir; comp_target; cwd; memo; ocamlpath }
 
@@ -117,13 +117,13 @@ module Conf = struct
       let env = Cmd.Env.info Env.cache_dir in
       let doc = "Cache directory." and docv = "PATH" in
       let none = "$(b,XDG_CACHE_HOME)/b0caml" in
-      Arg.(value & opt (Arg.some ~none B0_std_cli.filepath) None &
+      Arg.(value & opt (Arg.some ~none B0_std_cli.dir) None &
            info ["cache-dir"] ~doc ~docv ~docs ~env)
     in
     setup ~cache_dir ~comp_target ()
 
   let of_env () =
-    let cache_dir = env_find Fpath.of_string Env.cache_dir in
+    let cache_dir = env_find Filepath.of_string Env.cache_dir in
     let comp_target = env_find comp_target_of_string Env.comp_target in
     let log_level =
       let var = Cmdliner.Cmd.Env.info_var B0_std_cli.log_level_var in
@@ -150,7 +150,7 @@ module Err = struct
   let directories ~ocamlpath errs =
     let logical_dirs =
       Log.time (fun _ m -> m "logical dir domain") @@ fun () ->
-      Log.if_error ~use:Fpath.Set.empty @@
+      Log.if_error ~use:Filepath.Set.empty @@
       B0caml_ocamlpath.logical_dirs ocamlpath
     in
     let uninstalled =
@@ -165,11 +165,11 @@ module Err = struct
         match B0caml_ocamlpath.classify_path dir with
         | `Concrete dir ->
             B0caml_script.loc_errf
-              m " Missing directory %a" (pp_bold Fpath.pp_unquoted) dir
+              m " Missing directory %a" (pp_bold Filepath.pp_unquoted) dir
         | `Logical rdir ->
             B0caml_script.loc_errf
               m " @[<v>@[Directory %a not found in any %a directories.@]%a@]"
-              (pp_bold Fpath.pp_unquoted) rdir
+              (pp_bold Filepath.pp_unquoted) rdir
               (pp_bold Fmt.string) "OCAMLPATH"
               (pp_logical_suggestions ~logical_dirs ~uninstalled) dir
     in
@@ -180,24 +180,24 @@ module Err = struct
     | `Error e -> B0caml_script.loc_errf m " %s" e
     | `Miss ->
         B0caml_script.loc_errf
-          m " Missing file %a" (Fmt.st' [`Bold] Fpath.pp_unquoted) file
+          m " Missing file %a" (Fmt.st' [`Bold] Filepath.pp_unquoted) file
     in
     String.concat "\n\n" (List.map mod_use errs)
 end
 
 let get_script_file c file =
-  if file = "-" then Ok Fpath.dash else
-  Result.bind (Fpath.of_string file) @@ fun file ->
+  if file = "-" then Ok Filepath.dash else
+  Result.bind (Filepath.of_string file) @@ fun file ->
   Os.Path.realpath file
 
-let script_build_log ~build_dir = Fpath.(build_dir / "log")
+let script_build_log ~build_dir = Filepath.(build_dir / "log")
 
 let script_build_dir c ~script_file =
   (* A bit unclear what we want to use here maybe add what
      affects compilation environment *)
-  let file = Fpath.to_string @@ script_file in
+  let file = Filepath.to_string @@ script_file in
   let hash = B0_hash.to_hex @@ B0_hash.Xxh3_64.string file in
-  Fpath.(Conf.cache_dir c / hash)
+  Filepath.(Conf.cache_dir c / hash)
 
 let get_script c file =
   Result.bind (get_script_file c file) @@ fun script ->
@@ -251,14 +251,14 @@ let compile_source m (comp, code) r build_dir s ~dirs ~src_file =
   let* archives = B0caml_resolver.find_archives_and_deps r ~code ~dirs in
   let archives = List.map B0_ocaml.Cobj.file archives in
   let incs = Cmd.unstamp @@ Cmd.paths ~slip:"-I" dirs in
-  let base = Fpath.drop_ext ~multi:false src_file in
+  let base = Filepath.drop_ext ~multi:false src_file in
   let writes = match code with
-  | B0_ocaml.Code.Byte -> [ Fpath.(base + ".cmo") ]
-  | B0_ocaml.Code.Native -> [ Fpath.(base + ".cmx"); Fpath.(base + ".o") ]
+  | B0_ocaml.Code.Byte -> [ Filepath.(base + ".cmo") ]
+  | B0_ocaml.Code.Native -> [ Filepath.(base + ".cmx"); Filepath.(base + ".o") ]
   | B0_ocaml.Code.Wasm -> assert false
   in
-  let exe = Fpath.(build_dir / "exe" ) in
-  let writes = exe :: Fpath.(base + ".cmi") :: writes in
+  let exe = Filepath.(build_dir / "exe" ) in
+  let writes = exe :: Filepath.(base + ".cmi") :: writes in
   let reads = src_file :: archives (* FIXME add C libs. *) in
   B0_memo.ready_files m archives;
   B0_memo.spawn m ~reads ~writes @@
@@ -288,11 +288,11 @@ let compile_script c s =
   match dirs, mod_uses with
   | Ok dirs, Ok mod_uses ->
       Result.bind (Conf.memo c (B0caml_script.file s)) @@ fun m ->
-      let memo_dir = Fpath.(Conf.cache_dir c / "lib_resolve") in
+      let memo_dir = Filepath.(Conf.cache_dir c / "lib_resolve") in
       let r = B0caml_resolver.create m ~memo_dir ~ocamlpath in
       let build_dir = script_build_dir c ~script_file:(B0caml_script.file s) in
-      let src_file = Fpath.(build_dir / "src.ml") in
-      let exe = Fpath.(build_dir / "exe") in
+      let src_file = Filepath.(build_dir / "src.ml") in
+      let exe = Filepath.(build_dir / "exe") in
       begin
         ignore @@
         let* comp = find_comp c m in
@@ -309,10 +309,10 @@ let compile_script c s =
       | Error e ->
           let s = B0caml_script.file s in
           let read_howto ppf _ =
-            Fmt.pf ppf "b0caml log %a -r " Fpath.pp_quoted s
+            Fmt.pf ppf "b0caml log %a -r " Filepath.pp_quoted s
           in
           let write_howto ppf _ =
-            Fmt.pf ppf "b0caml log %a -w " Fpath.pp_quoted s
+            Fmt.pf ppf "b0caml log %a -w " Filepath.pp_quoted s
           in
           Fmt.error "%a"
             (B0_zero_conv.Op.pp_aggregate_error ~read_howto ~write_howto ()) e

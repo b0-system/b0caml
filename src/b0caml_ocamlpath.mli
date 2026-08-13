@@ -9,15 +9,16 @@ open B0_std
 
 (** {1:logical Logical paths} *)
 
-val classify_path : Fpath.t -> [ `Concrete of Fpath.t | `Logical of Fpath.t ]
+val classify_path :
+  Filepath.t -> [ `Concrete of Filepath.t | `Logical of Filepath.t ]
 (** [classify_path p] is:
     {ul
     {- [`Logical l] if [p] starts with a ['+']. [l] is [p] without
-       the ['+'] or [Fpath.v "."] if that results in the empty string.}
+       the ['+'] or [Filepath.v "."] if that results in the empty string.}
     {- [`Concrete d] otherwise.}}
        Logical paths are those that need to be looked up in [OCAMLPATH]. *)
 
-val logical_path_root_name : Fpath.t -> string option
+val logical_path_root_name : Filepath.t -> string option
 (** [logical_path_root_name d] is:
     {ul
     {- [Some r] if [classify_path d] is [`Logical d'] and [r]
@@ -31,20 +32,20 @@ type t
     but for legacy reasons we need to carry a bit more information. *)
 
 val get :
-  ?search:Cmd.tool_search -> Fpath.t list option -> (t, string) result
+  ?search:Cmd.tool_search -> Filepath.t list option -> (t, string) result
 (** [get ocamlpath] is [Ok ps] if [ocamlpath] is [Some ps] and otherwise:
     {ul
     {- If the [OCAMLPATH] environment variable is defined, its contents
-       parsed according to {!Fpath.list_of_search_path}.}
+       parsed according to {!Filepath.list_of_search_path}.}
     {- If the [opam] tool is available [[$(opam var lib); $(ocamlc -where)]]
        or [[$(opam var lib)]] if [$(ocamlc -where)] is included in it.}
     {- If the [opam] tool is not available [$(ocamlc -where)]}}
        [search] is given to {!Os.Cmd.find} to lookup [ocamlc] and [opam]. *)
 
-val dirs : t -> Fpath.t list
+val dirs : t -> Filepath.t list
 (** [dirs] are the directories in the OCAMLPATH. *)
 
-val ocaml_logical_dir : t -> Fpath.t
+val ocaml_logical_dir : t -> Filepath.t
 (** [ocaml_logical] is the path to the directory that should be called
     ["+ocaml"] in the OCAMLPATH. For systems installs where packages
     are installed in [ocamlc -where] (OCAMLPATH is undefined), [ocamlc
@@ -52,7 +53,7 @@ val ocaml_logical_dir : t -> Fpath.t
     up {!dirs}. This is the resolution that should be used for
     ["+ocaml"]. *)
 
-val logical_dirs : t -> (Fpath.Set.t, string) result
+val logical_dirs : t -> (Filepath.Set.t, string) result
 (** [logical_dirs] is the domain of logical directories in [ocamlpath] on the
     current file system. That is the set of directories [DIR] that can
     be specified as [+DIR]. The set has them without the [+]. *)
@@ -60,12 +61,12 @@ val logical_dirs : t -> (Fpath.Set.t, string) result
 (** {1:suggest Logical suggestions} *)
 
 val logical_dir_suggestions :
-  logical_dirs:Fpath.Set.t -> Fpath.t -> Fpath.t list option
+  logical_dirs:Filepath.Set.t -> Filepath.t -> Filepath.t list option
   (** [dir_suggestions ~dirs dir] are suggestions to correct
       an unfound logical directory [dir] in [logical_dirs] for
       example obtained via {!logical_dirs}. *)
 
-val pp_did_you_mean_logical_dirs : Fpath.t list Fmt.t
+val pp_did_you_mean_logical_dirs : Filepath.t list Fmt.t
 (** [pp_did_you_mean_logical_dirs] suggests a logical directory
     spell check. Formats a starting {!Fmt.cut} followed
     by a boxed sentence of the form ["Did you mean ... ?"]. *)

@@ -11,7 +11,7 @@ let exit_main = function
 | B0caml.Exit.Code c -> exit c
 | B0caml.Exit.Exec (exe, cmd) ->
     exit @@ Log.if_error ~use:B0caml.Exit.(code some_error) @@
-    let argv0 = Fpath.to_string (Cmd.find_tool cmd |> Option.get) in
+    let argv0 = Filepath.to_string (Cmd.find_tool cmd |> Option.get) in
     let cmd = Cmd.set_tool exe cmd in
     Result.bind (Os.Cmd.execv ~argv0 cmd) @@ fun _ -> assert false
 
@@ -40,7 +40,7 @@ let main_with_cli () =
 
 let main () =
   try match List.tl (Array.to_list Sys.argv) with
-  | file :: args when String.exists Fpath.is_dir_sep_char file ->
+  | file :: args when String.exists Filepath.is_dir_sep_char file ->
       main_without_cli file args
   | _ -> main_with_cli ()
   with

@@ -8,15 +8,15 @@ open B0_std
 (* Logical paths *)
 
 let classify_path d =
-  let s = Fpath.to_string d in
+  let s = Filepath.to_string d in
   if s.[0] <> '+' then `Concrete d else
   let s = String.subrange ~first:1 s in
-  if String.is_empty s then `Logical (Fpath.v ".") else `Logical (Fpath.v s)
+  if String.is_empty s then `Logical (Filepath.v ".") else `Logical (Filepath.v s)
 
 let logical_path_root_name dep =
-  let s = Fpath.to_string dep in
+  let s = Filepath.to_string dep in
   if s.[0] <> '+' then None else
-  let last = match String.index s Fpath.natural_dir_sep_char with
+  let last = match String.index s Filepath.natural_dir_sep_char with
   | exception Not_found -> String.length s - 1 | i -> i - 1
   in
   match String.subrange ~first:1 ~last s with "" -> None | s -> Some s
@@ -24,12 +24,12 @@ let logical_path_root_name dep =
 (* Lookup *)
 
 type t =
-  { dirs : Fpath.t list;
-    ocaml_logical_dir : Fpath.t; }
+  { dirs : Filepath.t list;
+    ocaml_logical_dir : Filepath.t; }
 
 let find dirs name =
   let exists name dir =
-    Log.if_error ~use:false @@ Os.Dir.exists Fpath.(dir / name)
+    Log.if_error ~use:false @@ Os.Dir.exists Filepath.(dir / name)
   in
   match List.find (exists name) dirs with
   | exception Not_found -> None
@@ -45,7 +45,7 @@ let get ?search = function
 | Some ps -> of_paths ps
 | None ->
     let var = "OCAMLPATH" and empty_is_none = false in
-    let path = Os.Env.var' ~empty_is_none Fpath.list_of_search_path var in
+    let path = Os.Env.var' ~empty_is_none Filepath.list_of_search_path var in
     match Log.if_error ~use:None path with
     | Some ps -> of_paths ps
     | None ->
@@ -53,7 +53,7 @@ let get ?search = function
         | None -> Ok None
         | Some cmd ->
             Result.bind (Os.Cmd.run_out ~trim:true cmd) @@ fun s ->
-            Result.map Option.some (Fpath.of_string s)
+            Result.map Option.some (Filepath.of_string s)
         in
         let opam_lib = fpath_of_cmd Cmd.(arg "opam" % "var" % "lib") in
         let ocaml_where = fpath_of_cmd Cmd.(arg "ocamlc" % "-where") in
@@ -62,13 +62,13 @@ let get ?search = function
         match opam_lib, ocaml_where with
         | None, Some p -> Ok { dirs = [p]; ocaml_logical_dir = p }
         | Some p, None ->
-            Ok { dirs = [p]; ocaml_logical_dir = Fpath.(p / "ocaml") }
+            Ok { dirs = [p]; ocaml_logical_dir = Filepath.(p / "ocaml") }
         | None, None ->
             let pp = Fmt.st [`Bold] in
             Fmt.error "@[<v>Could not detect an OCaml install.@,\
                             Try setting the %a variable.@]" pp "OCAMLPATH"
         | Some opam, Some ocaml
-          when Fpath.strictly_starts_with ~prefix:opam ocaml ->
+          when Filepath.strictly_starts_with ~prefix:opam ocaml ->
             Ok { dirs = [opam]; ocaml_logical_dir = ocaml }
         | Some opam, Some ocaml ->
             Ok { dirs = [opam; ocaml]; ocaml_logical_dir = ocaml }
@@ -78,22 +78,26 @@ let ocaml_logical_dir p = p.ocaml_logical_dir
 
 let logical_dirs p =
   let add_dir acc dir =
-    let add_path _ _ p ds = Fpath.Set.add Fpath.(v ("+" ^ to_string p)) ds in
+    let add_path _ _ p ds =
+      Filepath.Set.add Filepath.(v ("+" ^ to_string p)) ds
+    in
     Result.error_to_failure @@
     let dotfiles = false and follow_symlinks = true and recurse = true in
     Os.Dir.fold_dirs
       ~rel:true ~dotfiles ~follow_symlinks ~recurse add_path dir acc
   in
-  try Ok (List.fold_left add_dir Fpath.Set.empty p.dirs) with
+  try Ok (List.fold_left add_dir Filepath.Set.empty p.dirs) with
   | Failure e -> Error e
 
 let logical_dir_suggestions ~logical_dirs:dirs dir =
-  let dirs = Fpath.Set.fold (fun p acc -> Fpath.to_string p :: acc) dirs [] in
-  let dir = Fpath.to_string dir in
-  let dir_root = match String.split_first ~sep:Fpath.natural_dir_sep dir with
+  let dirs =
+    Filepath.Set.fold (fun p acc -> Filepath.to_string p :: acc) dirs []
+  in
+  let dir = Filepath.to_string dir in
+  let dir_root = match String.split_first ~sep:Filepath.natural_dir_sep dir with
   | None -> dir | Some (root, _) -> root
   in
-  let some ds = Some (List.map Fpath.v ds) in
+  let some ds = Some (List.map Filepath.v ds) in
   let ds = String.spellcheck (fun yield -> List.iter yield dirs) dir in
   if ds <> [] then some ds else
   let ds = match List.mem dir_root dirs with
@@ -103,4 +107,4 @@ let logical_dir_suggestions ~logical_dirs:dirs dir =
   if ds <> [] then some ds else None
 
 let pp_did_you_mean_logical_dirs ppf dirs =
-  Fmt.pf ppf "@,@[%a@]" (Fmt.did_you_mean (Fmt.code' Fpath.pp_unquoted)) dirs
+  Fmt.pf ppf "@,@[%a@]" (Fmt.did_you_mean (Fmt.code' Filepath.pp_unquoted)) dirs

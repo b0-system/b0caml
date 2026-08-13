@@ -25,23 +25,23 @@ val loc_errf : smeta ->
 type t
 (** The type for scripts. *)
 
-val of_string : file:Fpath.t -> string -> (t, string) result
+val of_string : file:Filepath.t -> string -> (t, string) result
 (** [of_string ?file s] parses a b0caml script from [s]. [file] is
     the file used for locations, it must be an absolute file path. *)
 
-val file : t -> Fpath.t
+val file : t -> Filepath.t
 (** [file s] is the script's file. *)
 
 val shebang : t -> (string * smeta) option
 (** [shebang s] is the optional shebang line without the shebang
     and the new line. *)
 
-val directories : t -> (Fpath.t * smeta) list
+val directories : t -> (Filepath.t * smeta) list
 (** [directories s] are the script's [#directory] directives. The location
     spans the directive's argument. Relative file paths or [+] are not
     resolved. See {!directory_resolution}. *)
 
-val mod_uses : t -> (Fpath.t * smeta) list
+val mod_uses : t -> (Filepath.t * smeta) list
 (** [mod_uses s] are the script's [#mod_use] directives. The location
     spans the directive's argument. Relative file paths are not
     resolved. See {!mod_use_resolution}. *)
@@ -57,20 +57,21 @@ val pp_locs : t Fmt.t
 
 (** {1:directory_resolution [#directory] resolution} *)
 
-type directory_resolution = Fpath.t * smeta
+type directory_resolution = Filepath.t * smeta
 (** The type for [#directory] resolution results. An absolute path to
     a existing directory and the directive where it originates
     from. *)
 
-type directory_resolution_error = Fpath.t * smeta * [`Error of string | `Miss ]
+type directory_resolution_error =
+  Filepath.t * smeta * [`Error of string | `Miss ]
 (** The type for [#directory] resolution error. An absolute or logical
     path that failed to resolve, the directive where it originates
     from and either a file system error or a missing error. *)
 
-val directory_resolution_dir : directory_resolution -> Fpath.t
+val directory_resolution_dir : directory_resolution -> Filepath.t
 (** [directory_resolution_dir res] is the directory mentioned in
     [res]. The file path is syntactically a
-    {{!Fpath.is_dir_path}directory path}. *)
+    {{!Filepath.is_dir_path}directory path}. *)
 
 val resolve_directories :
   ocamlpath:B0caml_ocamlpath.t -> t ->
@@ -81,16 +82,16 @@ val resolve_directories :
 
 (** {1:mod_use_resolution [#mod_use] resolution} *)
 
-type mod_use_resolution = Fpath.t option * Fpath.t * smeta
+type mod_use_resolution = Filepath.t option * Filepath.t * smeta
 (** The type for [#mod_use] resolution results. An absolute path to an
     optional existing interface file, an absolute path to an existing
     implementation file and the directive where it originates from. *)
 
-type mod_use_resolution_error = Fpath.t * smeta * [`Error of string | `Miss ]
+type mod_use_resolution_error = Filepath.t * smeta * [`Error of string | `Miss ]
 (** The type for [#mod_use] resolution errors. An absolute paths to an
     a resolved file and either a file system error or a missing file. *)
 
-val mod_use_resolution_files : mod_use_resolution -> Fpath.t list
+val mod_use_resolution_files : mod_use_resolution -> Filepath.t list
 (** [mod_use_resolution_files res] are the files mentioned in [res]. *)
 
 val resolve_mod_uses :

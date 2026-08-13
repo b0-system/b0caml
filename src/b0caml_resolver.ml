@@ -19,19 +19,19 @@ let ocamlpath_root_dirs ~ocamlpath =
 
 type t =
   { m : B0_memo.t;
-    memo_dir : Fpath.t;
+    memo_dir : Filepath.t;
     ocamlpath : B0caml_ocamlpath.t;
-    ocamlpath_root_dirs : Fpath.t list String.Map.t;
-    mutable dir_dirs : Fpath.Set.t Fpath.Map.t;
+    ocamlpath_root_dirs : Filepath.t list String.Map.t;
+    mutable dir_dirs : Filepath.Set.t Filepath.Map.t;
     mutable dir_cobjs :
-      B0_ocaml.Cobj.t list Fut.t Fpath.Map.t; (* Mapped by dir. *)
+      B0_ocaml.Cobj.t list Fut.t Filepath.Map.t; (* Mapped by dir. *)
     mutable mod_ref_cobj : B0_ocaml.Cobj.t list B0_ocaml.Modref.Map.t; }
 
 let create m ~memo_dir ~ocamlpath =
   { m; memo_dir; ocamlpath;
     ocamlpath_root_dirs = ocamlpath_root_dirs ~ocamlpath;
-    dir_dirs = Fpath.Map.empty;
-    dir_cobjs = Fpath.Map.empty; mod_ref_cobj = B0_ocaml.Modref.Map.empty }
+    dir_dirs = Filepath.Map.empty;
+    dir_cobjs = Filepath.Map.empty; mod_ref_cobj = B0_ocaml.Modref.Map.empty }
 
 let ocamlpath r = r.ocamlpath
 
@@ -39,32 +39,32 @@ let index_dir ~ext r dir =
   B0_memo.fail_if_error r.m @@
   let add st _ f acc = match st.Unix.st_kind with
   | Unix.S_DIR ->
-      r.dir_dirs <- Fpath.Map.add_to_set (module Fpath.Set) dir f r.dir_dirs;
+      r.dir_dirs <- Filepath.Map.add_to_set (module Filepath.Set) dir f r.dir_dirs;
       acc
-  | _ -> if Fpath.has_ext ext f then (f :: acc) else acc
+  | _ -> if Filepath.has_ext ext f then (f :: acc) else acc
   in
   let dotfiles = false and follow_symlinks = true and recurse = false in
   (Os.Dir.fold ~dotfiles ~follow_symlinks ~recurse add dir [])
 
-let get_cobjs_info r ~ext dir = match Fpath.Map.find dir r.dir_cobjs with
+let get_cobjs_info r ~ext dir = match Filepath.Map.find dir r.dir_cobjs with
 | info -> info
 | exception Not_found ->
     let info, set_info = Fut.make () in
-    r.dir_cobjs <- Fpath.Map.add dir info r.dir_cobjs;
+    r.dir_cobjs <- Filepath.Map.add dir info r.dir_cobjs;
     begin
       let cobjs = index_dir ~ext r dir in
       let o =
-        let base = Fpath.basename dir in
+        let base = Filepath.basename dir in
         let uniq =
-          B0_hash.to_hex (B0_memo.hash_string r.m (Fpath.to_string dir))
+          B0_hash.to_hex (B0_memo.hash_string r.m (Filepath.to_string dir))
         in
-        Fpath.(r.memo_dir / Fmt.str "%s-%s%s.info" base uniq ext)
+        Filepath.(r.memo_dir / Fmt.str "%s-%s%s.info" base uniq ext)
       in
       B0_memo.ready_files r.m cobjs;
       if ext = ".cmxa" then begin
         List.iter (fun o ->
             B0_memo.ready_file r.m
-              (Fpath.with_ext ~multi:false ".a" o)) cobjs
+              (Filepath.with_ext ~multi:false ".a" o)) cobjs
       end;
       B0_ocaml.Cobj.write r.m ~cobjs ~o;
       ignore @@
@@ -96,7 +96,7 @@ let try_find_mod_ref_root_dir r ref =
 
 let amb r ~ext ref cobjs =
   let pext = ".p" ^ ext in (* TODO doc filter out profile objects *)
-  let not_pext cobj = not (Fpath.has_ext pext (B0_ocaml.Cobj.file cobj)) in
+  let not_pext cobj = not (Filepath.has_ext pext (B0_ocaml.Cobj.file cobj)) in
   match List.filter not_pext cobjs with
   | [cobj] -> Fut.return (Some cobj)
   | cobjs ->
@@ -126,7 +126,7 @@ let rec find_mod_refs r ~deps ~ext cobjs defined todo =
   | exception Not_found ->
       let cobjs =
         let add cobj cobjs =
-          match Fpath.basename ~drop_exts:true (B0_ocaml.Cobj.file cobj) with
+          match Filepath.basename ~drop_exts:true (B0_ocaml.Cobj.file cobj) with
           | "stdlib" -> cobjs
           | _libname -> cobj :: cobjs
         in

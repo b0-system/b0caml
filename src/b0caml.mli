@@ -12,7 +12,7 @@ module Exit : sig
 
   type t =
   | Code of int
-  | Exec of Fpath.t * Cmd.t (** *)
+  | Exec of Filepath.t * Cmd.t (** *)
   (** The type for exits. Either an exit code or a command to [execv]. *)
 
   val code : t -> int
@@ -67,28 +67,28 @@ module Conf : sig
   (** The type for configurations. *)
 
   val make :
-    cache_dir:Fpath.t -> comp_target:comp_target -> cwd:Fpath.t ->
+    cache_dir:Filepath.t -> comp_target:comp_target -> cwd:Filepath.t ->
     ocamlpath:B0caml_ocamlpath.t -> unit -> t
   (** [v] constructs a configuration with the given attributes.
       See the corresponding accessors for details. *)
 
-  val cache_dir : t -> Fpath.t
+  val cache_dir : t -> Filepath.t
   (** [cache_dir c] is the cache directory. *)
 
-  val b0_cache_dir : t -> Fpath.t
+  val b0_cache_dir : t -> Filepath.t
   (** [b0_cache_dir c] is the b0 cache directory. *)
 
   val comp_target : t -> comp_target
   (** [comp_target c] is the target to which scripts are compiled. *)
 
-  val cwd : t -> Fpath.t
+  val cwd : t -> Filepath.t
   (** [cwd c] is the current working directory w.r.t. relative
       configuration file paths are expressed. *)
 
   val ocamlpath : t -> B0caml_ocamlpath.t
   (** [ocamlpath] is the [OCAMLPATH] to consider. *)
 
-  val memo : t -> Fpath.t -> (B0_memo.t, string) result
+  val memo : t -> Filepath.t -> (B0_memo.t, string) result
   (** [memo c script] is the memoizer for the configuration and script
       [script]. *)
 
@@ -116,14 +116,14 @@ module Err : sig
 end
 
 
-val get_script_file : Conf.t -> string -> (Fpath.t, string) result
+val get_script_file : Conf.t -> string -> (Filepath.t, string) result
 (** [get_script_file c file] is the absolute paths to script [file]. *)
 
-val script_build_dir : Conf.t -> script_file:Fpath.t -> Fpath.t
+val script_build_dir : Conf.t -> script_file:Filepath.t -> Filepath.t
 (** [script_build_dir c ~script_file] is a build directory in the cache
     directory of [c] for script [~script_file].*)
 
-val script_build_log : build_dir:Fpath.t -> Fpath.t
+val script_build_log : build_dir:Filepath.t -> Filepath.t
 (** [script_build_log ~build_dir] is a build log file in [build_dir]. *)
 
 val get_script : Conf.t -> string -> (B0caml_script.t, string) result
@@ -135,5 +135,5 @@ val get_source : Conf.t -> B0caml_script.t -> (string, string) result
     configuration [c], determined via {!B0caml_script.src}. *)
 
 val compile_script :
-  Conf.t -> B0caml_script.t -> (Fpath.t, string) result
+  Conf.t -> B0caml_script.t -> (Filepath.t, string) result
 (** [compile_script c s] compiles script [s] to an executable. *)

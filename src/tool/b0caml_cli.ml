@@ -28,7 +28,7 @@ let delete_script_cache conf script =
 let output_script_path conf script =
   let* script_file = B0caml.get_script_file conf script in
   let build_dir = B0caml.script_build_dir conf ~script_file in
-  Ok (Fmt.pr "%a@." Fpath.pp_unquoted build_dir)
+  Ok (Fmt.pr "%a@." Filepath.pp_unquoted build_dir)
 
 let cache ~conf ~action ~scripts =
   (* The notion of cache for `b0caml` is a bit different from a build
@@ -40,7 +40,7 @@ let cache ~conf ~action ~scripts =
       begin match scripts with
       | [] ->
           let cache_dir = B0caml.Conf.cache_dir conf in
-          let pp_path = Fmt.st' [`Bold] Fpath.pp_unquoted in
+          let pp_path = Fmt.st' [`Bold] Filepath.pp_unquoted in
           Log.stdout begin fun m ->
             m "Deleting %a, this may take some time..." pp_path cache_dir
           end;
@@ -62,7 +62,7 @@ let cache ~conf ~action ~scripts =
       begin match scripts with
       | [] ->
           Log.stdout
-            (fun m -> m "%a" Fpath.pp_unquoted (B0caml.Conf.cache_dir conf));
+            (fun m -> m "%a" Filepath.pp_unquoted (B0caml.Conf.cache_dir conf));
           Ok B0caml.Exit.some_error
       | scripts ->
           let output_path acc script =
@@ -118,7 +118,7 @@ let deps ~conf ~script_file ~raw ~directory ~mod_use ~root =
   | Error e, _ | _, Error e -> Error e
   | Ok ds, Ok ms -> Ok (List.append ds ms)
   in
-  let pp_deps = Fmt.(vbox @@ list Fpath.pp_unquoted) in
+  let pp_deps = Fmt.(vbox @@ list Filepath.pp_unquoted) in
   let* deps in
   if deps <> [] then Log.stdout (fun m -> m "%a" pp_deps deps);
   Ok B0caml.Exit.ok
