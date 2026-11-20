@@ -9,7 +9,8 @@ open B0_std
 
 let pkg_set_of_lines s =
   let add_pkg _ set pkg = if pkg <> "" then String.Set.add pkg set else set in
-  String.fold_ascii_lines ~drop_newlines:true add_pkg String.Set.empty s
+  let els = String.endlines Lf_crlf in
+  String.fold_lines els ~drop_endlines:true add_pkg String.Set.empty s
 
 let uninstalled ?search ?switch () =
   let switch = match switch with
